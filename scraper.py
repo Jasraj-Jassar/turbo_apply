@@ -59,6 +59,91 @@ class _TextExtractor(HTMLParser):
         return "\n".join([line for line in lines if line])
 
 
+class _MetaExtractor(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.meta = {}
+
+    def handle_starttag(self, tag, attrs):
+        if tag.lower() != "meta":
+            return
+        attrs_dict = dict(attrs)
+        key = attrs_dict.get("property") or attrs_dict.get("name")
+        value = attrs_dict.get("content")
+        if key and value:
+            self.meta[key] = value
+
+
+class _IndeedHTMLExtractor(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.title_parts = []
+        self.company_parts = []
+        self.description_parts = []
+        self._title_depth = 0
+        self._company_depth = 0
+        self._desc_depth = 0
+
+    def handle_starttag(self, tag, attrs):
+        tag = tag.lower()
+        attrs_dict = dict(attrs)
+
+        if self._title_depth:
+            self._title_depth += 1
+        if self._company_depth:
+            self._company_depth += 1
+        if self._desc_depth:
+            self._desc_depth += 1
+
+        if self._title_depth == 0 and tag == "h1":
+            self._title_depth = 1
+
+        if self._company_depth == 0 and _is_company_tag(attrs_dict):
+            self._company_depth = 1
+
+        if self._desc_depth == 0 and _is_description_tag(attrs_dict):
+            self._desc_depth = 1
+
+        if self._desc_depth and tag in {"br", "p", "li"}:
+            self.description_parts.append("\n")
+
+        company_attr = attrs_dict.get("data-company-name") or attrs_dict.get(
+            "data-companyname"
+        )
+        if company_attr and _looks_like_name(company_attr):
+            self.company_parts.append(company_attr)
+
+    def handle_endtag(self, tag):
+        tag = tag.lower()
+
+        if self._desc_depth and tag in {"p", "li", "ul", "ol"}:
+            self.description_parts.append("\n")
+
+        if self._title_depth:
+            self._title_depth -= 1
+        if self._company_depth:
+            self._company_depth -= 1
+        if self._desc_depth:
+            self._desc_depth -= 1
+
+    def handle_data(self, data):
+        if self._title_depth:
+            self.title_parts.append(data)
+        if self._company_depth:
+            self.company_parts.append(data)
+        if self._desc_depth:
+            self.description_parts.append(data)
+
+    def get_title(self) -> str:
+        return _clean_text(" ".join(self.title_parts))
+
+    def get_company(self) -> str:
+        return _clean_text(" ".join(self.company_parts))
+
+    def get_description(self) -> str:
+        return _clean_lines("".join(self.description_parts))
+
+
 def _read_local(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="replace")
 
@@ -160,6 +245,48 @@ def _strip_html(value: str) -> str:
     return extractor.get_text()
 
 
+def _clean_text(value: str) -> str:
+    return " ".join((value or "").split()).strip()
+
+
+def _clean_lines(value: str) -> str:
+    lines = [line.strip() for line in (value or "").splitlines()]
+    return "\n".join([line for line in lines if line])
+
+
+def _looks_like_name(value: str) -> bool:
+    cleaned = (value or "").strip()
+    if not cleaned:
+        return False
+    lowered = cleaned.lower()
+    if lowered in {"true", "false"}:
+        return False
+    return any(char.isalpha() for char in cleaned)
+
+
+def _is_company_tag(attrs: dict) -> bool:
+    if "data-company-name" in attrs or "data-companyname" in attrs:
+        return True
+    testid = (attrs.get("data-testid") or "").strip().lower()
+    if testid in {"company-name", "companyname", "company-name-link"}:
+        return True
+    if "company" in testid and "name" in testid:
+        return True
+    class_attr = attrs.get("class") or ""
+    class_lower = class_attr.lower()
+    return "companyname" in class_lower or "company-name" in class_lower
+
+
+def _is_description_tag(attrs: dict) -> bool:
+    if attrs.get("id") == "jobDescriptionText":
+        return True
+    testid = (attrs.get("data-testid") or "").strip()
+    if testid in {"jobDescriptionText", "job-description"}:
+        return True
+    class_attr = attrs.get("class") or ""
+    return "jobDescriptionText" in class_attr or "jobsearch-jobDescriptionText" in class_attr
+
+
 def _normalize_job(job_posting: dict) -> dict:
     title = job_posting.get("title") or job_posting.get("name") or ""
     org = job_posting.get("hiringOrganization")
@@ -187,9 +314,49 @@ def parse_indeed_job(html: str):
     return None
 
 
+def parse_indeed_html(html: str):
+    extractor = _IndeedHTMLExtractor()
+    extractor.feed(html)
+    title = extractor.get_title()
+    company = extractor.get_company()
+    description = extractor.get_description()
+
+    if not title or not company:
+        meta = _MetaExtractor()
+        meta.feed(html)
+        if not title:
+            title = _clean_text(
+                meta.meta.get("og:title") or meta.meta.get("twitter:title") or ""
+            )
+
+    if not description:
+        meta = _MetaExtractor()
+        meta.feed(html)
+        description = _clean_lines(
+            meta.meta.get("og:description") or meta.meta.get("description") or ""
+        )
+
+    if title or company or description:
+        return {
+            "title": title.strip(),
+            "company": company.strip(),
+            "description": description.strip(),
+        }
+    return None
+
+
 def scrape_job(url: str) -> dict:
     html = fetch_html(url)
     job = parse_indeed_job(html)
     if not job:
-        raise ValueError("No job posting data found in the page.")
+        job = parse_indeed_html(html)
+    if not job:
+        lower_html = html.lower()
+        if "captcha" in lower_html or "verify you are a human" in lower_html:
+            raise ValueError(
+                "Blocked by Indeed. Save the page as HTML in your browser and pass the file path."
+            )
+        raise ValueError(
+            "No job posting data found in the page. Try quoting the URL or save the page as HTML."
+        )
     return job

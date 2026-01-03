@@ -16,15 +16,86 @@ def _abbreviate_title(title: str, max_len: int = 4) -> str:
 
 
 def _company_slug(company: str) -> str:
-    return "-".join(_split_words(company))
+    words = _filter_company_words(_split_words(company))
+    if not words:
+        words = _split_words(company)[:4]
+    return "-".join(words)
+
+
+def _filter_company_words(words: list, max_words: int = 6) -> list:
+    filtered = []
+    for word in words:
+        if _is_noise_word(word):
+            if filtered:
+                break
+            continue
+        filtered.append(word)
+        if len(filtered) >= max_words:
+            break
+    return filtered
+
+
+def _is_noise_word(word: str) -> bool:
+    lower = word.lower()
+    if lower in {"true", "false"}:
+        return True
+    if lower.startswith("css"):
+        return True
+    if lower in {
+        "webkit",
+        "ms",
+        "inline",
+        "block",
+        "flex",
+        "display",
+        "margin",
+        "padding",
+        "size",
+        "color",
+        "inherit",
+        "vertical",
+        "align",
+        "start",
+        "end",
+        "auto",
+        "rem",
+        "em",
+        "px",
+    }:
+        return True
+    if len(word) > 24:
+        return True
+    if len(word) > 4 and any(ch.isdigit() for ch in word) and any(
+        ch.isalpha() for ch in word
+    ):
+        return True
+    return False
 
 
 def make_folder_name(title: str, company: str) -> str:
     title_part = _abbreviate_title(title)
     company_part = _company_slug(company)
     if title_part and company_part:
-        return f"{title_part}-{company_part}"
-    return title_part or company_part or "Job-Posting"
+        return _trim_slug(f"{title_part}-{company_part}")
+    return _trim_slug(title_part or company_part or "Job-Posting")
+
+
+def _trim_slug(slug: str, max_len: int = 80) -> str:
+    cleaned = re.sub(r"-{2,}", "-", slug).strip("-")
+    if len(cleaned) <= max_len:
+        return cleaned
+    parts = cleaned.split("-")
+    trimmed = []
+    for part in parts:
+        if not trimmed:
+            trimmed.append(part)
+            continue
+        candidate = "-".join(trimmed + [part])
+        if len(candidate) > max_len:
+            break
+        trimmed.append(part)
+    result = "-".join(trimmed).strip("-")
+    return result or cleaned[:max_len].rstrip("-")
 
 
 def process_job(job_data: dict, base_dir: Path, source_url: str | None = None) -> dict:
@@ -46,7 +117,13 @@ def process_job(job_data: dict, base_dir: Path, source_url: str | None = None) -
     prompt_path = file_ops.write_prompt_file(
         folder_path,
         "prompt.txt",
-        prompt_creator.get_prompt_text(),
+        prompt_creator.get_main_prompt_text(),
+        description or "Description not found.",
+    )
+    cover_prompt_path = file_ops.write_prompt_file(
+        folder_path,
+        "prompt-cover.txt",
+        prompt_creator.get_cover_prompt_text(),
         description or "Description not found.",
     )
 
@@ -55,4 +132,5 @@ def process_job(job_data: dict, base_dir: Path, source_url: str | None = None) -
         "folder_path": folder_path,
         "file_path": file_path,
         "prompt_path": prompt_path,
+        "cover_prompt_path": cover_prompt_path,
     }

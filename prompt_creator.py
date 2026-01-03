@@ -2,8 +2,8 @@ from pathlib import Path
 
 
 _BASE_DIR = Path(__file__).resolve().parent
-_PROMPT_TEMPLATE_PATH = _BASE_DIR / "Template" / "prompt-template.txt"
-_COVER_TEMPLATE_PATH = _BASE_DIR / "Template" / "Cover-leter-template.txt"
+_PROMPT_TEMPLATE_PATH = _BASE_DIR / "templates" / "prompt-template.txt"
+_COVER_TEMPLATE_PATH = _BASE_DIR / "templates" / "cover-letter-template.txt"
 
 
 def _read_template(path: Path) -> str:
@@ -12,9 +12,9 @@ def _read_template(path: Path) -> str:
     raise FileNotFoundError(f"Template not found: {path}")
 
 
-def get_prompt_text() -> str:
-    prompt_text = _read_template(_PROMPT_TEMPLATE_PATH)
-    cover_text = _read_template(_COVER_TEMPLATE_PATH)
+def get_main_prompt_text() -> str:
+    return _read_template(_PROMPT_TEMPLATE_PATH)
 
-    parts = [part for part in (prompt_text, cover_text) if part]
-    return "\n\n".join(parts).strip()
+
+def get_cover_prompt_text() -> str:
+    return _read_template(_COVER_TEMPLATE_PATH)
