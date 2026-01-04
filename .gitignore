@@ -7,3 +7,4 @@ venv/
 .env
 .env.*
 *.log
+cookies.txt

@@ -1,8 +1,12 @@
+import http.cookiejar
 import json
 import urllib.error
 import urllib.request
 from html.parser import HTMLParser
 from pathlib import Path
+
+
+COOKIES_FILE = Path(__file__).parent / "cookies.txt"
 
 
 class _ScriptCollector(HTMLParser):
@@ -148,11 +152,57 @@ def _read_local(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="replace")
 
 
-def _http_get(url: str, headers: dict) -> str:
-    opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor())
+def _load_cookies() -> http.cookiejar.MozillaCookieJar | None:
+    """Load cookies from Netscape format cookies.txt if it exists."""
+    if not COOKIES_FILE.exists():
+        return None
+    try:
+        jar = http.cookiejar.MozillaCookieJar(str(COOKIES_FILE))
+        jar.load(ignore_discard=True, ignore_expires=True)
+        return jar
+    except Exception:
+        return None
+
+
+def _http_get(url: str, headers: dict, cookie_jar: http.cookiejar.CookieJar | None = None) -> str:
+    import gzip
+    import zlib
+
+    handlers = []
+    if cookie_jar:
+        handlers.append(urllib.request.HTTPCookieProcessor(cookie_jar))
+    else:
+        handlers.append(urllib.request.HTTPCookieProcessor())
+    opener = urllib.request.build_opener(*handlers)
     request = urllib.request.Request(url, headers=headers)
     with opener.open(request, timeout=30) as response:
-        return response.read().decode("utf-8", errors="replace")
+        raw_data = response.read()
+        encoding = response.headers.get("Content-Encoding", "").lower()
+
+        # Decompress if needed
+        if encoding == "gzip":
+            try:
+                raw_data = gzip.decompress(raw_data)
+            except Exception:
+                pass
+        elif encoding == "deflate":
+            try:
+                raw_data = zlib.decompress(raw_data)
+            except Exception:
+                try:
+                    raw_data = zlib.decompress(raw_data, -zlib.MAX_WBITS)
+                except Exception:
+                    pass
+        elif encoding == "br":
+            try:
+                import brotli
+                raw_data = brotli.decompress(raw_data)
+            except ImportError:
+                pass  # brotli not installed, try raw
+            except Exception:
+                pass
+
+        return raw_data.decode("utf-8", errors="replace")
 
 
 def fetch_html(url: str) -> str:
@@ -167,7 +217,34 @@ def fetch_html(url: str) -> str:
     if local_path:
         return _read_local(local_path)
 
+    # Load cookies from file if available
+    cookie_jar = _load_cookies()
+
+    # Detect site type
+    is_linkedin = "linkedin.com" in url.lower()
+
     header_sets = [
+        # LinkedIn-optimized headers (more complete browser simulation)
+        {
+            "User-Agent": (
+                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+            ),
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Accept-Encoding": "gzip, deflate",
+            "Cache-Control": "no-cache",
+            "Pragma": "no-cache",
+            "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1",
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "none",
+            "Sec-Fetch-User": "?1",
+            "Sec-Ch-Ua": '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+            "Sec-Ch-Ua-Mobile": "?0",
+            "Sec-Ch-Ua-Platform": '"Linux"',
+        },
         {"User-Agent": "Mozilla/5.0 (job-tool)"},
         {
             "User-Agent": (
@@ -186,13 +263,21 @@ def fetch_html(url: str) -> str:
     last_error = None
     for headers in header_sets:
         try:
-            return _http_get(url, headers)
+            return _http_get(url, headers, cookie_jar)
         except urllib.error.HTTPError as exc:
             last_error = exc
-            if exc.code not in {403, 429}:
+            # 999 is LinkedIn's specific block code
+            if exc.code not in {403, 429, 999}:
                 break
 
     if last_error:
+        if last_error.code == 999 and is_linkedin:
+            raise ValueError(
+                "LinkedIn blocked the request (HTTP 999). This usually means:\n"
+                "1. LinkedIn requires authentication - export your cookies using a browser extension\n"
+                "   (Cookie-Editor) to cookies.txt in Netscape format, or\n"
+                "2. Save the job page as HTML in your browser and pass the file path instead."
+            )
         raise last_error
 
     raise RuntimeError("Failed to fetch HTML.")
@@ -314,6 +399,70 @@ def parse_indeed_job(html: str):
     return None
 
 
+def parse_linkedin_job(html: str):
+    """Parse LinkedIn job posting page."""
+    import re
+
+    meta = _MetaExtractor()
+    meta.feed(html)
+
+    # Extract title and company from og:title
+    # Format: "Company hiring Title in Location | LinkedIn"
+    og_title = meta.meta.get("og:title", "")
+    title = ""
+    company = ""
+
+    # Try to parse "Company hiring Title in Location"
+    hiring_match = re.match(r"^(.+?)\s+hiring\s+(.+?)\s+in\s+.+", og_title)
+    if hiring_match:
+        company = hiring_match.group(1).strip()
+        title = hiring_match.group(2).strip()
+    else:
+        # Fallback: look for title in h1 or use og:title without "| LinkedIn"
+        title = re.sub(r"\s*\|\s*LinkedIn\s*$", "", og_title).strip()
+
+    # Extract description from show-more-less-html__markup div
+    description = ""
+    desc_match = re.search(
+        r'show-more-less-html__markup[^>]*>(.*?)</div>',
+        html,
+        re.DOTALL | re.IGNORECASE
+    )
+    if desc_match:
+        description = _strip_html(desc_match.group(1))
+    else:
+        # Fallback to meta description
+        description = meta.meta.get("og:description") or meta.meta.get("description") or ""
+
+    # Try to get company from page if not found in og:title
+    if not company:
+        # Look for company name in specific elements
+        company_match = re.search(
+            r'topcard__org-name-link[^>]*>([^<]+)</a>',
+            html,
+            re.IGNORECASE
+        )
+        if company_match:
+            company = _clean_text(company_match.group(1))
+        else:
+            # Try another pattern
+            company_match = re.search(
+                r'class="[^"]*company[^"]*"[^>]*>([^<]+)<',
+                html,
+                re.IGNORECASE
+            )
+            if company_match:
+                company = _clean_text(company_match.group(1))
+
+    if title or company or description:
+        return {
+            "title": title.strip(),
+            "company": company.strip(),
+            "description": _clean_lines(description).strip(),
+        }
+    return None
+
+
 def parse_indeed_html(html: str):
     extractor = _IndeedHTMLExtractor()
     extractor.feed(html)
@@ -345,16 +494,48 @@ def parse_indeed_html(html: str):
     return None
 
 
+def _is_linkedin_auth_wall(html: str) -> bool:
+    """Check if LinkedIn is showing a sign-in wall."""
+    lower = html.lower()
+    indicators = [
+        "sign in to view",
+        "join now to see",
+        "authwall",
+        "sign in or join",
+        "login-form",
+        '"isLoggedIn":false',
+    ]
+    return any(ind in lower for ind in indicators)
+
+
 def scrape_job(url: str) -> dict:
+    is_linkedin = "linkedin.com" in url.lower()
     html = fetch_html(url)
+
+    # Try JSON-LD first (works for many sites)
     job = parse_indeed_job(html)
+
+    # Try LinkedIn-specific parser
+    if not job and is_linkedin:
+        job = parse_linkedin_job(html)
+
+    # Fallback to generic HTML parser
     if not job:
         job = parse_indeed_html(html)
+
     if not job:
         lower_html = html.lower()
         if "captcha" in lower_html or "verify you are a human" in lower_html:
             raise ValueError(
                 "Blocked by Indeed. Save the page as HTML in your browser and pass the file path."
+            )
+        if is_linkedin and _is_linkedin_auth_wall(html):
+            raise ValueError(
+                "LinkedIn requires authentication to view this job posting.\n"
+                "Options:\n"
+                "1. Export your LinkedIn cookies using a browser extension (e.g., Cookie-Editor)\n"
+                "   to 'cookies.txt' in Netscape format in the tool's directory, or\n"
+                "2. Open the job page in your browser, save as HTML, and pass the file path."
             )
         raise ValueError(
             "No job posting data found in the page. Try quoting the URL or save the page as HTML."
