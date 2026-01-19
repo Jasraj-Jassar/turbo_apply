@@ -14,6 +14,9 @@ def _compile_resume_pdf(tex_arg: str, output_stem: str = "Resume") -> Path:
     if not tex_path.is_file():
         raise FileNotFoundError(f"LaTeX file not found: {tex_path}")
 
+    # Clean leftovers from any previous run for the same jobname
+    _cleanup_latex_aux(tex_path.parent, output_stem)
+
     cmd = [
         "pdflatex",
         "-interaction=nonstopmode",
@@ -34,12 +37,14 @@ def _compile_resume_pdf(tex_arg: str, output_stem: str = "Resume") -> Path:
             "pdflatex not found. Install TeX Live / MacTeX / MiKTeX to build PDFs."
         ) from exc
 
+    # Always clean up aux files, even if pdflatex reports errors
+    _cleanup_latex_aux(tex_path.parent, output_stem)
+
     if result.returncode != 0:
         raise RuntimeError(
             f"pdflatex failed with exit code {result.returncode}:\n{result.stdout}"
         )
 
-    _cleanup_latex_aux(tex_path.parent, output_stem)
     return tex_path.parent / f"{output_stem}.pdf"
 
 

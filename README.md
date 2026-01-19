@@ -45,7 +45,8 @@ When given a `.tex` file, the tool runs `pdflatex` (in that file's directory)
 and writes `Resume.pdf` alongside it. LaTeX builds require `pdflatex` plus any
 packages your resume uses (e.g., `marvosym` from `texlive-fontsextra` /
 `texlive-fonts-extra`). Auxiliary files from the build (`.aux`, `.log`, etc.)
-are cleaned up automatically; only `Resume.pdf` remains.
+are cleaned up automatically after each run (even on errors); only
+`Resume.pdf` remains.
 
 ## Modules
 - `scraper.py`: fetches HTML and extracts job data
