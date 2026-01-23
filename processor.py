@@ -1,9 +1,34 @@
+import os
 import re
 from pathlib import Path
 
 import file_ops
 import prompt_creator
 
+_WINDOWS_RESERVED_NAMES = {
+    "CON",
+    "PRN",
+    "AUX",
+    "NUL",
+    "COM1",
+    "COM2",
+    "COM3",
+    "COM4",
+    "COM5",
+    "COM6",
+    "COM7",
+    "COM8",
+    "COM9",
+    "LPT1",
+    "LPT2",
+    "LPT3",
+    "LPT4",
+    "LPT5",
+    "LPT6",
+    "LPT7",
+    "LPT8",
+    "LPT9",
+}
 
 def _split_words(text: str) -> list:
     cleaned = re.sub(r"[^A-Za-z0-9]+", " ", text or "")
@@ -76,8 +101,11 @@ def make_folder_name(title: str, company: str) -> str:
     title_part = _abbreviate_title(title)
     company_part = _company_slug(company)
     if title_part and company_part:
-        return _trim_slug(f"{title_part}-{company_part}")
-    return _trim_slug(title_part or company_part or "Job-Posting")
+        slug = _trim_slug(f"{title_part}-{company_part}")
+    else:
+        slug = _trim_slug(title_part or company_part or "Job-Posting")
+    slug = _normalize_slug_for_platform(slug)
+    return _trim_slug(slug)
 
 
 def _trim_slug(slug: str, max_len: int = 80) -> str:
@@ -96,6 +124,17 @@ def _trim_slug(slug: str, max_len: int = 80) -> str:
         trimmed.append(part)
     result = "-".join(trimmed).strip("-")
     return result or cleaned[:max_len].rstrip("-")
+
+
+def _normalize_slug_for_platform(slug: str) -> str:
+    cleaned = slug.strip(" .")
+    if not cleaned:
+        return "Job-Posting"
+    if os.name == "nt":
+        base = cleaned.split(".")[0].upper()
+        if base in _WINDOWS_RESERVED_NAMES:
+            cleaned = f"{cleaned}-job".strip(" .")
+    return cleaned or "Job-Posting"
 
 
 def process_job(job_data: dict, base_dir: Path, source_url: str | None = None) -> dict:

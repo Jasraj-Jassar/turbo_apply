@@ -28,6 +28,12 @@ save the page as HTML and pass the file path instead:
 python job_tool.py "/path/to/saved_page.html"
 ```
 
+## Windows Notes
+- Run with `py -3 job_tool.py "<job_url>"` (PowerShell/cmd) or `python job_tool.py ...`.
+- Saved HTML or `.tex` files can be passed as Windows paths or `file://` URIs; the tool normalizes them.
+- Folder/file names are adjusted to avoid Windows reserved device names and trailing spaces/dots.
+- For resume builds, install MiKTeX (or TeX Live) and ensure `pdflatex.exe` is on your PATH; MiKTeX may prompt to install missing packages on first use.
+
 ## Output Example
 Input:
 - Title: `PLC Programmer`

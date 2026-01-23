@@ -1,6 +1,7 @@
 import http.cookiejar
 import json
 import urllib.error
+import urllib.parse
 import urllib.request
 from html.parser import HTMLParser
 from pathlib import Path
@@ -152,6 +153,24 @@ def _read_local(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="replace")
 
 
+def _local_path_from_arg(value: str) -> Path | None:
+    lowered = value.lower()
+    if lowered.startswith("file://"):
+        parsed = urllib.parse.urlparse(value)
+        path = parsed.path or ""
+        if parsed.netloc and parsed.netloc not in {"", "localhost"}:
+            path = f"//{parsed.netloc}{path}"
+        candidate = Path(urllib.request.url2pathname(path))
+        if candidate.exists():
+            return candidate
+        return None
+
+    candidate = Path(value).expanduser()
+    if candidate.exists():
+        return candidate
+    return None
+
+
 def _load_cookies() -> http.cookiejar.MozillaCookieJar | None:
     """Load cookies from Netscape format cookies.txt if it exists."""
     if not COOKIES_FILE.exists():
@@ -206,14 +225,7 @@ def _http_get(url: str, headers: dict, cookie_jar: http.cookiejar.CookieJar | No
 
 
 def fetch_html(url: str) -> str:
-    local_path = None
-    if url.startswith("file://"):
-        local_path = Path(url[7:])
-    else:
-        candidate = Path(url)
-        if candidate.exists():
-            local_path = candidate
-
+    local_path = _local_path_from_arg(url)
     if local_path:
         return _read_local(local_path)
 

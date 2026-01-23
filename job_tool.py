@@ -2,6 +2,8 @@
 import argparse
 import subprocess
 from pathlib import Path
+from urllib.parse import urlparse
+from urllib.request import url2pathname
 
 import processor
 import scraper
@@ -49,8 +51,13 @@ def _compile_resume_pdf(tex_arg: str, output_stem: str = "Resume") -> Path:
 
 
 def _normalize_tex_path(value: str) -> Path:
-    if value.startswith("file://"):
-        value = value[7:]
+    lower = value.lower()
+    if lower.startswith("file://"):
+        parsed = urlparse(value)
+        path = parsed.path or ""
+        if parsed.netloc and parsed.netloc not in {"", "localhost"}:
+            path = f"//{parsed.netloc}{path}"
+        value = url2pathname(path)
     return Path(value).expanduser().resolve()
 
 
