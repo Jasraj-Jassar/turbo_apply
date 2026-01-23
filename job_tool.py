@@ -127,6 +127,9 @@ def main() -> None:
 
     print(f"Created folder: {result['folder_path']}")
     print(f"Wrote description: {result['file_path']}")
+    resume_template = result.get("resume_template_path")
+    if resume_template:
+        print(f"Copied LaTeX template: {resume_template}")
 
 
 if __name__ == "__main__":

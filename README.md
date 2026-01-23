@@ -11,6 +11,8 @@ directory you run it from. It can also compile a LaTeX resume to `Resume.pdf`.
 4. It writes `<folder>/<folder>.txt` (source URL on top), `<folder>/prompt.txt`
    (from `templates/prompt-template.txt`), and `<folder>/prompt-cover.txt`
    (from `templates/cover-letter-template.txt`).
+5. It copies `templates/resume-template.tex` into the folder so you can start a
+   tailored resume; build it later with `python job_tool.py <that-file>.tex`.
 
 ## Usage
 ```
@@ -45,6 +47,7 @@ PLC-Prog-Automation-Integrators-Inc/
 PLC-Prog-Automation-Integrators-Inc/PLC-Prog-Automation-Integrators-Inc.txt
 PLC-Prog-Automation-Integrators-Inc/prompt.txt
 PLC-Prog-Automation-Integrators-Inc/prompt-cover.txt
+PLC-Prog-Automation-Integrators-Inc/resume-template.tex
 ```
 
 When given a `.tex` file, the tool runs `pdflatex` (in that file's directory)

@@ -5,6 +5,7 @@ from pathlib import Path
 import file_ops
 import prompt_creator
 
+_LATEX_TEMPLATE_PATH = Path(__file__).resolve().parent / "templates" / "resume-template.tex"
 _WINDOWS_RESERVED_NAMES = {
     "CON",
     "PRN",
@@ -165,6 +166,9 @@ def process_job(job_data: dict, base_dir: Path, source_url: str | None = None) -
         prompt_creator.get_cover_prompt_text(),
         description or "Description not found.",
     )
+    resume_template_path = file_ops.copy_template_file(
+        _LATEX_TEMPLATE_PATH, folder_path, "resume-template.tex"
+    )
 
     return {
         "folder_name": folder_name,
@@ -172,4 +176,5 @@ def process_job(job_data: dict, base_dir: Path, source_url: str | None = None) -
         "file_path": file_path,
         "prompt_path": prompt_path,
         "cover_prompt_path": cover_prompt_path,
+        "resume_template_path": resume_template_path,
     }

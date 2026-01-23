@@ -1,3 +1,4 @@
+import shutil
 from pathlib import Path
 import textwrap
 
@@ -68,3 +69,15 @@ def write_prompt_file(
     payload = "\n\n".join(parts).rstrip() + "\n"
     file_path.write_text(payload, encoding="utf-8")
     return file_path
+
+
+def copy_template_file(
+    template_path: Path, target_dir: Path, target_name: str | None = None
+) -> Path | None:
+    if not template_path.exists():
+        return None
+    target_path = target_dir / (target_name or template_path.name)
+    if target_path.exists():
+        return target_path
+    shutil.copyfile(template_path, target_path)
+    return target_path
