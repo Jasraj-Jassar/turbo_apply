@@ -1,10 +1,14 @@
-Write in french. Use the following guidelines to to create a cover letter based on 1: the job posting below and 2: the resume "Resume.pdf" (who corresponds to the applicant). Do not use sentence structures that use '—'.
-Intro: "Dear Hiring Manager,"
-First paragraph: A description of who the applicant is (positions or experiences related to the job, don't mention the university), what makes them personable (what they like or believe in) and what they want (learning or working on specific topics). Try keeping it to two sentences.
-Second paragraph: 3 skills that matter for the position. For each skill, explain how you use that skill, give an example of that usage and explain why it was useful in that example. Try keeping it to three sentences; don't enumerate the skills.
-Third paragraph: Pick 2 aspects of the company relevant to the applicant and explain why the applicant would be interested to work at this company. Try keeping it to two sentences; don't enumerate the aspects.
-For the last paragraph, use the following format:
-"I am confident that my experience aligns with [COMPANY]’s needs and hope to further discuss how I can contribute to your team’s success.
+Utilise les directives suivantes pour créer une lettre de motivation basée sur 1 : l’offre d’emploi ci-dessous et 2 : le CV « Resume.pdf » (qui correspond au candidat). N’utilise pas de structures de phrase contenant « — ». Essaie de garder les phrases courtes si possibles (tout en ne perdant pas d'informations). Sauvegarde la lettre dans un fichier texte nommé "cover-letter.txt". N'oublie pas les accents sur les lettres!
+Intro: «Madame, Monsieur,»
 
-Thank you,
-[Full Name]"
+Premier paragraphe : Une description de qui est le candidat (postes ou expériences liés au poste, sans mentionner l’université), ce qui le rend humain et sympathique (ce qu’il aime ou pense) et son objectif(apprendre ou travailler sur des sujets spécifiques). Essaye de limiter à deux phrases.
+
+Deuxième paragraphe : Liste naturellement trois compétences importantes pour le poste que le candidat possède. Pour chaque compétence, explique comment le candidate a utilisé cette compétence, donne un exemple de cette utilisation et explique pourquoi elle a été utile dans cet exemple. Essaye de limiter à trois phrases, n'énumère pas les compétences.
+
+Troisième paragraphe: Choisis deux aspects de l’entreprise pertinents pour le candidat et explique pourquoi le candidat serait intéressé à travailler dans cette entreprise. Essaye de limiter à deux phrases, n'énumère pas les aspects.
+
+Pour le dernier paragraphe, utilise le format suivant :
+« Je suis convaincu que mon expérience répondra aux besoins de [ENTREPRISE] et serais heureux de discuter de la valeur que je peux apporter à votre équipe.
+
+Cordialement,
+[Nom complet] »
