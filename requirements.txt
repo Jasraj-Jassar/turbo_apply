@@ -1,0 +1,5 @@
+# Turbo Apply - Requirements
+# All core dependencies are Python standard library (no pip install needed).
+# The optional package below improves scraping for sites using Brotli compression.
+
+brotli  # optional: decode Brotli-compressed HTTP responses

@@ -9,7 +9,7 @@ Works on **Windows** and **Linux**. Zero third-party dependencies — built enti
 - **Python 3.10+** (uses walrus operator and modern syntax)
 - **tkinter** — included with Python on Windows; on Linux install with `sudo apt install python3-tk` (Debian/Ubuntu) or `sudo dnf install python3-tkinter` (Fedora)
 - No other third-party packages required — uses only the Python standard library
-- **Optional:** `pdflatex` on PATH for LaTeX → PDF compilation
+- **Optional:** `pdflatex` on PATH for LaTeX → PDF compilation — install [MiKTeX](https://miktex.org/download) (Windows) or TeX Live (`sudo apt install texlive-latex-base` on Linux)
 - **Optional:** `cookies.txt` (Netscape format) in the project root for authenticated scraping — export cookies using [Cookie-Editor](https://cookie-editor.com/)
 
 ## How It Works
@@ -29,7 +29,9 @@ The generated prompts are designed to be fed directly to an AI assistant (ChatGP
 
 ## GUI — Quick Start
 
-Launch the graphical interface:
+**Windows one-click setup:** Double-click `TurboApply.cmd` — it auto-installs Python, MiKTeX, and pip packages if missing, then launches the GUI. Requires [winget](https://aka.ms/getwinget) (built into Windows 10/11).
+
+Or launch manually:
 
 ```bash
 python run.py           # auto-opens GUI when no arguments given
