@@ -12,6 +12,31 @@ import processor
 import scraper
 
 
+def _find_pdflatex():
+    """Locate pdflatex on PATH or in common install directories."""
+    import platform as _plat
+    found = shutil.which("pdflatex")
+    if found:
+        return found
+    if _plat.system() == "Windows":
+        candidates = [
+            Path.home() / "AppData/Local/Programs/MiKTeX/miktex/bin/x64/pdflatex.exe",
+            Path("C:/Program Files/MiKTeX/miktex/bin/x64/pdflatex.exe"),
+            Path("C:/Program Files (x86)/MiKTeX/miktex/bin/x64/pdflatex.exe"),
+            Path.home() / "AppData/Local/Programs/MiKTeX/miktex/bin/pdflatex.exe",
+        ]
+        texlive = Path("C:/texlive")
+        if texlive.exists():
+            for year_dir in sorted(texlive.iterdir(), reverse=True):
+                cand = year_dir / "bin/windows/pdflatex.exe"
+                if cand.exists():
+                    return str(cand)
+        for c in candidates:
+            if c.exists():
+                return str(c)
+    return None
+
+
 def _compile_resume(tex_arg):
     path = _parse_path(tex_arg)
     if path.suffix.lower() != ".tex" or not path.is_file():
@@ -20,13 +45,19 @@ def _compile_resume(tex_arg):
     stem = "Resume"
     _cleanup_aux(path.parent, stem)
 
+    pdflatex = _find_pdflatex()
+    if not pdflatex:
+        raise RuntimeError(
+            "pdflatex not found. Install MiKTeX (https://miktex.org/download) "
+            "or TeX Live, then restart this application."
+        )
+
     try:
         result = subprocess.run(
-            ["pdflatex", "-interaction=nonstopmode", f"-jobname={stem}", path.name],
+            [pdflatex, "--enable-installer", "-interaction=nonstopmode",
+             f"-jobname={stem}", path.name],
             cwd=path.parent, capture_output=True, text=True
         )
-    except FileNotFoundError:
-        raise RuntimeError("pdflatex not found. Install TeX Live.") from None
     finally:
         _cleanup_aux(path.parent, stem)
 

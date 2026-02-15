@@ -55,19 +55,50 @@ def _cleanup_aux(directory, stem):
             pass
 
 
+def _find_pdflatex():
+    """Locate pdflatex on PATH or in common install directories."""
+    found = shutil.which("pdflatex")
+    if found:
+        return found
+    # Common MiKTeX / TeX Live locations on Windows
+    if platform.system() == "Windows":
+        candidates = [
+            Path.home() / "AppData/Local/Programs/MiKTeX/miktex/bin/x64/pdflatex.exe",
+            Path("C:/Program Files/MiKTeX/miktex/bin/x64/pdflatex.exe"),
+            Path("C:/Program Files (x86)/MiKTeX/miktex/bin/x64/pdflatex.exe"),
+            Path.home() / "AppData/Local/Programs/MiKTeX/miktex/bin/pdflatex.exe",
+        ]
+        # Also check TeX Live year-based installs
+        texlive = Path("C:/texlive")
+        if texlive.exists():
+            for year_dir in sorted(texlive.iterdir(), reverse=True):
+                cand = year_dir / "bin/windows/pdflatex.exe"
+                if cand.exists():
+                    return str(cand)
+        for c in candidates:
+            if c.exists():
+                return str(c)
+    return None
+
+
 def _compile_resume(tex_arg):
     path = _parse_path(tex_arg)
     if path.suffix.lower() != ".tex" or not path.is_file():
         raise ValueError(f"Invalid .tex file: {path}")
     stem = "Resume"
     _cleanup_aux(path.parent, stem)
+    pdflatex = _find_pdflatex()
+    if not pdflatex:
+        raise RuntimeError(
+            "pdflatex not found. Install MiKTeX (https://miktex.org/download) "
+            "or TeX Live, then restart this application."
+        )
     try:
         result = subprocess.run(
-            ["pdflatex", "-interaction=nonstopmode", f"-jobname={stem}", path.name],
+            [pdflatex, "--enable-installer", "-interaction=nonstopmode",
+             f"-jobname={stem}", path.name],
             cwd=path.parent, capture_output=True, text=True,
         )
-    except FileNotFoundError:
-        raise RuntimeError("pdflatex not found. Install TeX Live / MiKTeX.") from None
     finally:
         _cleanup_aux(path.parent, stem)
     if result.returncode != 0:
@@ -278,19 +309,19 @@ class TurboApplyApp(tk.Tk):
         self._browse_tex_btn.pack(side=tk.LEFT)
 
         # ── Output directory ────────────────────────────────────────
-        dir_frame = tk.Frame(body, bg=_BG)
-        dir_frame.pack(fill=tk.X, pady=(0, 12))
-        tk.Label(dir_frame, text="Output Dir",
+        self._dir_frame = tk.Frame(body, bg=_BG)
+        self._dir_frame.pack(fill=tk.X, pady=(0, 12))
+        tk.Label(self._dir_frame, text="Output Dir",
                  font=_FONT, bg=_BG, fg=_FG, width=12, anchor="w").pack(side=tk.LEFT)
         self._dir_entry = tk.Entry(
-            dir_frame, textvariable=self._output_dir,
+            self._dir_frame, textvariable=self._output_dir,
             font=_FONT, bg=_BG_INPUT, fg=_FG, insertbackground=_FG,
             relief=tk.FLAT, highlightthickness=1,
             highlightbackground=_BORDER, highlightcolor=_ACCENT,
         )
         self._dir_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, ipady=6, padx=(0, 8))
         HoverButton(
-            dir_frame, text="Browse…", font=_FONT_SM,
+            self._dir_frame, text="Browse…", font=_FONT_SM,
             bg=_BG_LIGHT, fg=_FG, relief=tk.FLAT, padx=12, pady=4,
             cursor="hand2", command=self._browse_dir,
         ).pack(side=tk.LEFT)
@@ -381,12 +412,16 @@ class TurboApplyApp(tk.Tk):
 
         if mode == "url":
             self._url_frame.pack(fill=tk.X, pady=(0, 8))
+            self._dir_frame.pack(fill=tk.X, pady=(0, 12))
             self._run_btn.config(text="⚡  Generate")
         elif mode == "empty":
             self._empty_frame.pack(fill=tk.X, pady=(0, 8))
+            self._dir_frame.pack(fill=tk.X, pady=(0, 12))
             self._run_btn.config(text="⚡  Generate")
         elif mode == "tex":
             self._tex_frame.pack(fill=tk.X, pady=(0, 8))
+            self._dir_frame.pack_forget()
+            self._run_btn.config(text="📄  Compile PDF")
             self._run_btn.config(text="📄  Compile PDF")
 
     # ── File dialogs ────────────────────────────────────────────────
