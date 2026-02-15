@@ -1,7 +1,7 @@
-Write in french. Edit resume-template.tex only using the following guidelines:
-- Revise the existing text to align with the job description below. 
-- Use relevant keywords and concepts, not verbatim sentences. 
-- Remove content that is irrelevant or redundant. You may delete, rewrite, or condense
-lines as needed, but do not change formatting, structure, or add new sections.
-- Do not change dates, job titles and company names.
-- Reduce the "Cours Pertinents" section to two lines by keeping the most related keywords to the job position.
+Modifie le fichier resume-template.tex en suivant les directives suivantes:
+- Révise le texte existant pour l'aligner à la description du poste ci-dessous.
+- Utilise des mots-clés et concepts pertinents, sans reprendre de phrases mot pour mot.
+- Assures toi que les compétences requises du poste sont mises en évidence dans le CV.
+- Supprime le contenu non pertinent ou redondant. Tu peux supprimer, réécrire ou condenser des lignes si nécessaire, mais ne modifie pas la mise en forme et la structure et n'ajoute pas de nouvelles sections.
+- Ne modifie pas les dates, les intitulés de poste ni les noms des entreprises.
+- Réduis et condense la section « Cours pertinents » en conservant les mots-clés les plus liés au poste.

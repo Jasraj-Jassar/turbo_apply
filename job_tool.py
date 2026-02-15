@@ -69,7 +69,22 @@ def main():
     parser = argparse.ArgumentParser(description="Create job folder from posting URL or compile .tex resume.")
     parser.add_argument("url", nargs="?", help="Job posting URL or .tex file path")
     parser.add_argument("-vf", action="store_true", help="French mode")
+    parser.add_argument("-e", type=str, help="Empty template folder")
     args = parser.parse_args()
+
+    # if empty folder, skip whole process
+    if args.e:
+        try:
+            result = processor.process_empty_job(args.e.strip(), Path.cwd(), french=args.vf)
+        except ValueError as e:
+            parser.error(str(e))
+        print(f"Created: {result['folder_path']}")
+        if _open_in_vscode(result["folder_path"]):
+            print("Opened in VS Code")
+        if tpl := result.get("resume_template_path"):
+            print(f"Template: {tpl}")
+        print("Ended")
+        return
 
     target = (args.url or "").strip()
     if not target:

@@ -97,3 +97,18 @@ def process_job(job_data, base_dir, source_url=None, french=False):
         "cover_prompt_path": file_ops.write_prompt_file(folder, "prompt-cover.txt", prompt_creator.get_cover_prompt(french), desc),
         "resume_template_path": file_ops.copy_template(tpl_dir / "resume-template.tex", folder),
     }
+
+def process_empty_job(name, base_dir, french=False):
+    if not name:
+        raise ValueError("Job name is required for empty template.")
+    folder_name = _trim(_safe_slug(name))
+    folder = file_ops.ensure_job_folder(base_dir, folder_name)
+    tpl_dir = _TEMPLATES_VF if french else _TEMPLATES
+    return {
+        "folder_name": folder_name,
+        "folder_path": folder,
+        "file_path": None,
+        "prompt_path": file_ops.write_prompt_file(folder, "prompt.txt", prompt_creator.get_main_prompt(french), ""),
+        "cover_prompt_path": file_ops.write_prompt_file(folder, "prompt-cover.txt", prompt_creator.get_cover_prompt(french), ""),
+        "resume_template_path": file_ops.copy_template(tpl_dir / "resume-template.tex", folder),
+    }
