@@ -138,6 +138,14 @@ if not defined PDFLATEX (
     echo        pdflatex OK.
 )
 
+:: ── Create cookies.txt if missing ─────────────────────────────────
+if not exist "%~dp0cookies.txt" (
+    echo # Netscape HTTP Cookie File> "%~dp0cookies.txt"
+    echo # https://cookie-editor.com/ - Export cookies in Netscape format and paste them here>> "%~dp0cookies.txt"
+    echo # One cookie per line. Lines starting with # are comments.>> "%~dp0cookies.txt"
+    echo        Created empty cookies.txt — paste your browser cookies here if needed.
+)
+
 :: ── Launch GUI ────────────────────────────────────────────────────
 echo  [5/5] Launching Turbo Apply...
 echo.
