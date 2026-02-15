@@ -1,6 +1,8 @@
 # Turbo Apply
 
-A CLI tool that turns a job posting URL into a ready-to-work application folder — complete with the job description, AI-ready prompts for tailoring your resume and writing a cover letter, and a copy of your LaTeX resume template.
+A cross-platform desktop app (GUI + CLI) that turns a job posting URL into a ready-to-work application folder — complete with the job description, AI-ready prompts for tailoring your resume and writing a cover letter, and a copy of your LaTeX resume template.
+
+Works on **Windows** and **Linux**. Zero third-party dependencies — built entirely on Python's standard library (tkinter).
 
 ## How It Works
 
@@ -17,22 +19,47 @@ A CLI tool that turns a job posting URL into a ready-to-work application folder 
 
 The generated prompts are designed to be fed directly to an AI assistant (ChatGPT, Copilot, etc.) along with the job description so it can tailor your resume and draft a cover letter for each application.
 
-## Quick Start
+## GUI — Quick Start
+
+Launch the graphical interface:
 
 ```bash
-# Scrape a job posting and generate the folder
+python run.py           # auto-opens GUI when no arguments given
+python gui.py            # launch GUI directly
+```
+
+The GUI provides three modes accessible via radio buttons:
+
+| Mode | What it does |
+|---|---|
+| **🌐 Scrape URL / HTML** | Paste a job URL or browse for a local HTML file → generates the full folder |
+| **📁 Empty Template** | Enter a folder name → creates a skeleton folder with prompts and template |
+| **📄 Compile LaTeX** | Browse for a `.tex` file → compiles it to `Resume.pdf` via `pdflatex` |
+
+Features:
+- **Output directory picker** — choose where folders are created
+- **French mode toggle** — generates French prompts
+- **Open in VS Code** — auto-opens the new folder after generation
+- **Open Folder button** — opens the result in your file explorer
+- **Live output log** — colour-coded progress and error messages
+- **Threaded execution** — GUI stays responsive during scraping
+
+## CLI — Quick Start
+
+Pass arguments to use the command-line interface:
+
+```bash
+# Via the unified launcher
+python run.py "<job_url>"
+python run.py -vf "<job_url>"
+python run.py -e "My-Job-Name"
+python run.py /path/to/resume.tex
+
+# Or directly
 python job_tool.py "<job_url>"
-
-# Use a saved HTML file (useful when sites block scraping)
 python job_tool.py "/path/to/page.html"
-
-# Compile a LaTeX resume to PDF
 python job_tool.py /path/to/resume.tex
-
-# French mode — uses French prompt templates
 python job_tool.py -vf "<job_url>"
-
-# Create an empty template folder (no scraping)
 python job_tool.py -e "My-Job-Name"
 ```
 
@@ -62,6 +89,8 @@ The scraper uses browser-like headers, optional cookie files (`cookies.txt` in N
 ## Project Structure
 
 ```
+run.py               # Unified launcher — GUI (no args) or CLI (with args)
+gui.py               # Cross-platform GUI application (tkinter)
 job_tool.py          # CLI entry point — dispatches scrape, process, or compile
 scraper.py           # Fetches & parses job postings (LinkedIn, Indeed, JSON-LD, HTML)
 processor.py         # Builds folder name, creates folder, writes files
@@ -88,6 +117,7 @@ python job_tool.py -vf -e "Mon-Poste"
 ## Requirements
 
 - **Python 3.10+** (uses walrus operator and modern syntax)
-- No third-party packages required — uses only the Python standard library
+- **tkinter** — included with Python on Windows; on Linux install with `sudo apt install python3-tk` (Debian/Ubuntu) or `sudo dnf install python3-tkinter` (Fedora)
+- No other third-party packages required — uses only the Python standard library
 - **Optional:** `pdflatex` on PATH for LaTeX → PDF compilation
 - **Optional:** `cookies.txt` (Netscape format) in the project root for authenticated scraping
