@@ -4,6 +4,14 @@ A cross-platform desktop app (GUI + CLI) that turns a job posting URL into a rea
 
 Works on **Windows** and **Linux**. Zero third-party dependencies — built entirely on Python's standard library (tkinter).
 
+## Requirements
+
+- **Python 3.10+** (uses walrus operator and modern syntax)
+- **tkinter** — included with Python on Windows; on Linux install with `sudo apt install python3-tk` (Debian/Ubuntu) or `sudo dnf install python3-tkinter` (Fedora)
+- No other third-party packages required — uses only the Python standard library
+- **Optional:** `pdflatex` on PATH for LaTeX → PDF compilation
+- **Optional:** `cookies.txt` (Netscape format) in the project root for authenticated scraping — export cookies using [Cookie-Editor](https://cookie-editor.com/)
+
 ## How It Works
 
 1. **Scrape** — Give it a job URL (or a saved HTML file). The scraper extracts the job title, company, and full description. Supports **LinkedIn**, **Indeed**, any site that embeds [JSON-LD `JobPosting`](https://schema.org/JobPosting) markup, and local `.html` files as a fallback.
@@ -114,10 +122,3 @@ python job_tool.py -vf -e "Mon-Poste"
 - **Windows:** Use `py -3 job_tool.py "<job_url>"` or `python ...`. Paths and Windows-reserved names (CON, PRN, etc.) are automatically handled. Install [MiKTeX](https://miktex.org/) or [TeX Live](https://www.tug.org/texlive/) and ensure `pdflatex.exe` is on PATH for PDF builds.
 - **Linux / macOS:** Ensure `pdflatex` is installed (`sudo apt install texlive-latex-base` or equivalent) for PDF builds. VS Code auto-open works when the `code` CLI is available.
 
-## Requirements
-
-- **Python 3.10+** (uses walrus operator and modern syntax)
-- **tkinter** — included with Python on Windows; on Linux install with `sudo apt install python3-tk` (Debian/Ubuntu) or `sudo dnf install python3-tkinter` (Fedora)
-- No other third-party packages required — uses only the Python standard library
-- **Optional:** `pdflatex` on PATH for LaTeX → PDF compilation
-- **Optional:** `cookies.txt` (Netscape format) in the project root for authenticated scraping
