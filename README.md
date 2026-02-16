@@ -62,6 +62,33 @@ Software-Eng-Google/
 - **LinkedIn/Indeed blocking you?** Save the job page as an HTML file (Ctrl+S in your browser), then use the **Browse** button to select it instead of pasting the URL.
 - **Need cookies?** Install [Cookie-Editor](https://cookie-editor.com/) in your browser, export cookies as `cookies.txt` (Netscape format), and drop the file in the Turbo Apply folder.
 
+## Getting Started (Linux)
+
+### Step 1 — Enable launch permissions (one time)
+
+In the Turbo Apply folder:
+
+```bash
+chmod +x TurboApply.sh
+```
+
+Run it as your normal user (not with `sudo`):
+
+```bash
+./TurboApply.sh
+```
+
+### Step 2 — Run by double-click
+
+Double-click **`TurboApply.desktop`**.
+
+- If your file manager asks, choose **Trust and Launch** (or **Allow Launching**).
+- The launcher opens a terminal, installs missing dependencies (Python/tkinter/TeX where possible), and starts the app.
+
+### Step 3 — Use the App
+
+Same app flow as Windows.
+
 ---
 ---
 
@@ -117,6 +144,7 @@ python gui.py            # launch GUI directly
 ```
 
 **Windows one-click:** Double-click `TurboApply.cmd` — auto-installs Python, MiKTeX, and pip packages if missing, then launches the GUI. Requires [winget](https://aka.ms/getwinget) (built into Windows 10/11).
+**Linux one-click:** Double-click `TurboApply.desktop` — runs `TurboApply.sh` to set up a local `.venv`, install dependencies, and launch the GUI.
 
 ## Scraping Details
 
@@ -133,6 +161,8 @@ The scraper uses browser-like headers, optional cookie files (`cookies.txt` in N
 
 ```
 TurboApply.cmd       # One-click Windows installer + launcher
+TurboApply.sh        # One-click Linux installer + launcher
+TurboApply.desktop   # Clickable Linux launcher entry
 run.py               # Unified launcher — GUI (no args) or CLI (with args)
 gui.py               # Cross-platform GUI application (tkinter)
 job_tool.py          # CLI entry point — dispatches scrape, process, or compile
@@ -157,4 +187,3 @@ python job_tool.py -vf -e "Mon-Poste"
 
 - **Windows:** Paths and Windows-reserved names (CON, PRN, etc.) are automatically handled. `pdflatex` is auto-discovered in common MiKTeX/TeX Live install directories even if not on PATH.
 - **Linux / macOS:** Ensure `pdflatex` is installed (`sudo apt install texlive-latex-base` or equivalent) for PDF builds. VS Code auto-open works when the `code` CLI is available.
-

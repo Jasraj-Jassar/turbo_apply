@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Turbo Apply
+Comment=One-click setup and launch for Turbo Apply (Linux)
+Exec=/home/oligio_pheonix/Tools/turbo_apply/TurboApply.sh
+Path=/home/oligio_pheonix/Tools/turbo_apply
+Icon=applications-development
+Terminal=true
+StartupNotify=true
+Categories=Development;
+Keywords=jobs;resume;latex;automation;
