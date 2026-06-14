@@ -149,7 +149,7 @@ python run.py           # auto-opens GUI when no arguments given
 python gui.py            # launch GUI directly
 ```
 
-**Windows one-click:** Double-click `TurboApply.cmd` — auto-installs Python, Codex CLI, MiKTeX, and pip packages if missing, then launches the GUI and closes the setup terminal. Requires [winget](https://aka.ms/getwinget) (built into Windows 10/11).
+**Windows one-click:** Double-click `TurboApply.cmd` — auto-installs Python, Codex CLI, MiKTeX, required LaTeX packages/fonts, and pip packages if missing, then launches the GUI and closes the setup terminal. Requires [winget](https://aka.ms/getwinget) (built into Windows 10/11).
 **Linux one-click:** Double-click `TurboApply.desktop` — runs `TurboApply.sh` to set up a local `.venv`, install dependencies, and launch the GUI.
 
 ## Scraping Details

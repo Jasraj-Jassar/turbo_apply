@@ -141,10 +141,49 @@ if not defined PDFLATEX (
         echo           Install manually: https://miktex.org/download
     ) else (
         echo        MiKTeX installed successfully.
+        call :refreshpath
     )
 ) else (
     echo        pdflatex OK.
 )
+
+echo        Preparing LaTeX packages and fonts...
+set "MPM="
+where mpm >nul 2>&1 && set "MPM=mpm"
+if not defined MPM (
+    if exist "%LOCALAPPDATA%\Programs\MiKTeX\miktex\bin\x64\mpm.exe" set "MPM=%LOCALAPPDATA%\Programs\MiKTeX\miktex\bin\x64\mpm.exe"
+)
+if not defined MPM (
+    if exist "C:\Program Files\MiKTeX\miktex\bin\x64\mpm.exe" set "MPM=C:\Program Files\MiKTeX\miktex\bin\x64\mpm.exe"
+)
+
+if defined MPM (
+    for %%p in (geometry parskip enumitem hyperref ec cm-super) do (
+        "%MPM%" --install=%%p --quiet >nul 2>nul
+    )
+) else (
+    color 0E
+    echo  [WARNING] MiKTeX package manager not found. PDF compilation may request packages later.
+)
+
+set "INITEXMF="
+where initexmf >nul 2>&1 && set "INITEXMF=initexmf"
+if not defined INITEXMF (
+    if exist "%LOCALAPPDATA%\Programs\MiKTeX\miktex\bin\x64\initexmf.exe" set "INITEXMF=%LOCALAPPDATA%\Programs\MiKTeX\miktex\bin\x64\initexmf.exe"
+)
+if not defined INITEXMF (
+    if exist "C:\Program Files\MiKTeX\miktex\bin\x64\initexmf.exe" set "INITEXMF=C:\Program Files\MiKTeX\miktex\bin\x64\initexmf.exe"
+)
+
+if defined INITEXMF (
+    "%INITEXMF%" --enable-installer >nul 2>nul
+    "%INITEXMF%" --update-fndb >nul 2>nul
+    "%INITEXMF%" --mkmaps >nul 2>nul
+) else (
+    color 0E
+    echo  [WARNING] MiKTeX config utility not found. PDF font maps may need manual refresh.
+)
+echo        LaTeX package prep done.
 
 :: ── Check / Install Codex CLI ─────────────────────────────────────
 echo  [5/6] Checking Codex CLI...

@@ -16,7 +16,9 @@ import scraper
 _CODEX_START_PROMPT = (
     "Read prompt.txt and prompt-cover.txt. Only edit resume-template.tex and "
     "create cover-letter.txt. Use the existing latex_to_pdf.py to create "
-    "Resume.pdf. Do not create, edit, or replace scripts or any other files."
+    "Resume.pdf. Do not create, edit, or replace scripts or any other files. "
+    "Do not change the LaTeX preamble, documentclass, or usepackage lines. "
+    "If the converter reports a missing LaTeX package, stop and report it."
 )
 
 
@@ -76,10 +78,22 @@ def _compile_resume(tex_arg):
 
 
 def _open_pdf_in_browser(pdf_path):
+    path = Path(pdf_path).resolve()
+    uri = path.as_uri()
     try:
-        return webbrowser.open(Path(pdf_path).resolve().as_uri(), new=2)
+        if webbrowser.open(uri, new=2):
+            return True
     except Exception:
-        return False
+        pass
+
+    if platform.system() == "Windows":
+        try:
+            _popen_silent(["cmd.exe", "/c", "start", "", uri])
+            return True
+        except OSError:
+            pass
+
+    return False
 
 
 def _parse_path(value):
