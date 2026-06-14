@@ -32,6 +32,7 @@ _FONT = ("Segoe UI", 11) if platform.system() == "Windows" else ("Helvetica", 11
 _FONT_SM = (_FONT[0], 9)
 _FONT_LG = (_FONT[0], 14, "bold")
 _FONT_MONO = ("Consolas", 10) if platform.system() == "Windows" else ("Monospace", 10)
+_CODEX_START_PROMPT = "follow both promts"
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
@@ -106,16 +107,83 @@ def _compile_resume(tex_arg):
     return path.parent / f"{stem}.pdf"
 
 
-def _open_in_vscode(path):
-    code = shutil.which("code") or shutil.which("code.cmd")
-    if code:
+def _which_first(*names):
+    for name in names:
+        found = shutil.which(name)
+        if found:
+            return found
+    return None
+
+
+def _popen_silent(args):
+    kwargs = {
+        "stdout": subprocess.DEVNULL,
+        "stderr": subprocess.DEVNULL,
+    }
+    if platform.system() == "Windows" and hasattr(subprocess, "CREATE_NO_WINDOW"):
+        kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
+    return subprocess.Popen(args, **kwargs)
+
+
+def _open_in_codex(path):
+    names = ("codex.cmd", "codex.exe", "codex") if platform.system() == "Windows" else ("codex",)
+    codex = _which_first(*names)
+    if codex:
         try:
-            subprocess.Popen([code, str(path)],
-                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            _popen_silent([codex, "app", str(path)])
+            _send_codex_start_prompt()
             return True
         except OSError:
             pass
     return False
+
+
+def _open_in_vscode(path):
+    names = ("code.cmd", "code.exe", "code") if platform.system() == "Windows" else ("code",)
+    code = _which_first(*names)
+    if code:
+        try:
+            _popen_silent([code, str(path)])
+            return True
+        except OSError:
+            pass
+    return False
+
+
+def _open_workspace(path, opener):
+    if opener == "vscode":
+        return "VS Code", _open_in_vscode(path)
+    return "Codex", _open_in_codex(path)
+
+
+def _send_codex_start_prompt():
+    if platform.system() != "Windows":
+        return
+
+    script = (
+        f"$prompt = '{_CODEX_START_PROMPT}'; "
+        "Start-Sleep -Seconds 3; "
+        "$shell = New-Object -ComObject WScript.Shell; "
+        "for ($i = 0; $i -lt 20; $i++) { "
+        "if ($shell.AppActivate('Codex')) { "
+        "Start-Sleep -Milliseconds 300; "
+        "$shell.SendKeys($prompt + '{ENTER}'); "
+        "exit 0 "
+        "} "
+        "Start-Sleep -Milliseconds 500 "
+        "}"
+    )
+    flags = subprocess.CREATE_NO_WINDOW if hasattr(subprocess, "CREATE_NO_WINDOW") else 0
+    try:
+        subprocess.Popen(
+            ["powershell", "-NoProfile", "-ExecutionPolicy", "ByPass",
+             "-WindowStyle", "Hidden", "-Command", script],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            creationflags=flags,
+        )
+    except OSError:
+        pass
 
 
 def _open_folder(path):
@@ -191,13 +259,13 @@ class TurboApplyApp(tk.Tk):
         super().__init__()
         self.title("Turbo Apply")
         self.configure(bg=_BG)
-        self.minsize(720, 600)
-        self.geometry("780x660")
+        self.minsize(820, 600)
+        self.geometry("900x660")
         self._set_icon()
 
         # State
         self._french = tk.BooleanVar(value=False)
-        self._open_vscode = tk.BooleanVar(value=True)
+        self._open_with = tk.StringVar(value="codex")
         self._output_dir = tk.StringVar(value=str(Path.cwd()))
         self._mode = tk.StringVar(value="url")  # url | empty | tex
 
@@ -237,8 +305,30 @@ class TurboApplyApp(tk.Tk):
         body = tk.Frame(self, bg=_BG)
         body.pack(fill=tk.BOTH, expand=True, padx=24)
 
+        main = tk.Frame(body, bg=_BG)
+        main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        side = tk.Frame(body, bg=_BG_LIGHT, highlightthickness=1,
+                        highlightbackground=_BORDER)
+        side.pack(side=tk.RIGHT, fill=tk.Y, padx=(16, 0))
+        side.configure(width=150)
+        side.pack_propagate(False)
+
+        tk.Label(side, text="Open With", font=_FONT,
+                 bg=_BG_LIGHT, fg=_FG).pack(anchor="w", padx=12, pady=(12, 4))
+        tk.Label(side, text="after Generate", font=_FONT_SM,
+                 bg=_BG_LIGHT, fg=_FG_DIM).pack(anchor="w", padx=12, pady=(0, 10))
+
+        for val, label in [("codex", "Codex"), ("vscode", "VS Code")]:
+            tk.Radiobutton(
+                side, text=label, variable=self._open_with, value=val,
+                font=_FONT, bg=_BG_LIGHT, fg=_FG, selectcolor=_BG_INPUT,
+                activebackground=_BG_LIGHT, activeforeground=_ACCENT,
+                indicatoron=True,
+            ).pack(anchor="w", padx=12, pady=(0, 8))
+
         # ── Mode selector ───────────────────────────────────────────
-        mode_frame = tk.Frame(body, bg=_BG)
+        mode_frame = tk.Frame(main, bg=_BG)
         mode_frame.pack(fill=tk.X, pady=(0, 12))
         tk.Label(mode_frame, text="Mode", font=_FONT, bg=_BG, fg=_FG).pack(side=tk.LEFT)
 
@@ -254,7 +344,7 @@ class TurboApplyApp(tk.Tk):
             rb.pack(side=tk.LEFT, padx=(16, 0))
 
         # ── Input area ──────────────────────────────────────────────
-        self._input_frame = tk.Frame(body, bg=_BG)
+        self._input_frame = tk.Frame(main, bg=_BG)
         self._input_frame.pack(fill=tk.X, pady=(0, 8))
 
         # URL / HTML input row
@@ -309,7 +399,7 @@ class TurboApplyApp(tk.Tk):
         self._browse_tex_btn.pack(side=tk.LEFT)
 
         # ── Output directory ────────────────────────────────────────
-        self._dir_frame = tk.Frame(body, bg=_BG)
+        self._dir_frame = tk.Frame(main, bg=_BG)
         self._dir_frame.pack(fill=tk.X, pady=(0, 12))
         tk.Label(self._dir_frame, text="Output Dir",
                  font=_FONT, bg=_BG, fg=_FG, width=12, anchor="w").pack(side=tk.LEFT)
@@ -327,7 +417,7 @@ class TurboApplyApp(tk.Tk):
         ).pack(side=tk.LEFT)
 
         # ── Options row ─────────────────────────────────────────────
-        opts = tk.Frame(body, bg=_BG)
+        opts = tk.Frame(main, bg=_BG)
         opts.pack(fill=tk.X, pady=(0, 16))
 
         tk.Checkbutton(
@@ -336,14 +426,8 @@ class TurboApplyApp(tk.Tk):
             activebackground=_BG, activeforeground=_ACCENT,
         ).pack(side=tk.LEFT)
 
-        tk.Checkbutton(
-            opts, text="Open in VS Code", variable=self._open_vscode,
-            font=_FONT, bg=_BG, fg=_FG, selectcolor=_BG_INPUT,
-            activebackground=_BG, activeforeground=_ACCENT,
-        ).pack(side=tk.LEFT, padx=(24, 0))
-
         # ── Action button ───────────────────────────────────────────
-        btn_row = tk.Frame(body, bg=_BG)
+        btn_row = tk.Frame(main, bg=_BG)
         btn_row.pack(fill=tk.X, pady=(0, 12))
 
         self._run_btn = HoverButton(
@@ -365,12 +449,12 @@ class TurboApplyApp(tk.Tk):
         self._open_folder_btn.config(state=tk.DISABLED)
 
         # ── Log output ──────────────────────────────────────────────
-        log_label = tk.Frame(body, bg=_BG)
+        log_label = tk.Frame(main, bg=_BG)
         log_label.pack(fill=tk.X, pady=(0, 4))
         tk.Label(log_label, text="Output Log", font=_FONT_SM,
                  bg=_BG, fg=_FG_DIM).pack(side=tk.LEFT)
 
-        log_frame = tk.Frame(body, bg=_BORDER, bd=1, relief=tk.FLAT)
+        log_frame = tk.Frame(main, bg=_BORDER, bd=1, relief=tk.FLAT)
         log_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 16))
         self._log = tk.Text(
             log_frame, font=_FONT_MONO, bg=_BG_INPUT, fg=_FG,
@@ -515,7 +599,7 @@ class TurboApplyApp(tk.Tk):
 
         base_dir = Path(self._output_dir.get())
         french = self._french.get()
-        open_vs = self._open_vscode.get()
+        open_with = self._open_with.get()
 
         def work():
             self.after(0, self._log_msg, f"Scraping: {target}", "accent")
@@ -537,10 +621,16 @@ class TurboApplyApp(tk.Tk):
                 self.after(0, self._log_msg, f"Cover:   {result['cover_prompt_path'].name}", "info")
             if result.get("resume_template_path"):
                 self.after(0, self._log_msg, f"Template: {result['resume_template_path'].name}", "info")
+            if result.get("latex_script_path"):
+                self.after(0, self._log_msg, f"Script:   {result['latex_script_path'].name}", "info")
 
-            if open_vs:
-                if _open_in_vscode(folder):
-                    self.after(0, self._log_msg, "Opened in VS Code", "accent")
+            opener_name, opened = _open_workspace(folder, open_with)
+            if opened:
+                self.after(0, self._log_msg, f"Opened in {opener_name}", "accent")
+            else:
+                self.after(0, self._log_msg,
+                           f"Could not open in {opener_name}. Check that it is installed.",
+                           "warn")
 
             self.after(0, self._set_status, f"Done — {folder.name}", _SUCCESS)
             self.after(0, lambda: self._open_folder_btn.config(state=tk.NORMAL))
@@ -557,7 +647,7 @@ class TurboApplyApp(tk.Tk):
 
         base_dir = Path(self._output_dir.get())
         french = self._french.get()
-        open_vs = self._open_vscode.get()
+        open_with = self._open_with.get()
 
         def work():
             self.after(0, self._log_msg, f"Creating empty template: {name}", "accent")
@@ -568,10 +658,16 @@ class TurboApplyApp(tk.Tk):
             self.after(0, self._log_msg, f"Folder: {folder}", "success")
             if result.get("resume_template_path"):
                 self.after(0, self._log_msg, f"Template: {result['resume_template_path'].name}", "info")
+            if result.get("latex_script_path"):
+                self.after(0, self._log_msg, f"Script: {result['latex_script_path'].name}", "info")
 
-            if open_vs:
-                if _open_in_vscode(folder):
-                    self.after(0, self._log_msg, "Opened in VS Code", "accent")
+            opener_name, opened = _open_workspace(folder, open_with)
+            if opened:
+                self.after(0, self._log_msg, f"Opened in {opener_name}", "accent")
+            else:
+                self.after(0, self._log_msg,
+                           f"Could not open in {opener_name}. Check that it is installed.",
+                           "warn")
 
             self.after(0, self._set_status, f"Done — {folder.name}", _SUCCESS)
             self.after(0, lambda: self._open_folder_btn.config(state=tk.NORMAL))

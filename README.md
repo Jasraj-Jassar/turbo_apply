@@ -14,7 +14,7 @@ Click the green **Code** button on this page → **Download ZIP**. Extract the f
 
 Double-click **`TurboApply.cmd`** inside the folder.
 
-That's it. The script will automatically install everything your computer needs (Python, LaTeX tools, etc.) and open the app. This only happens the first time — after that it just opens instantly.
+That's it. The script will automatically install everything your computer needs (Python, Codex, LaTeX tools, etc.) and open the app. This only happens the first time — after that it just opens instantly.
 
 > If Windows shows a "Windows protected your PC" popup, click **More info** → **Run anyway**. This is normal for downloaded scripts.
 
@@ -43,7 +43,7 @@ The app opens with three modes at the top. Pick the one you need:
 ### Options
 
 - **🇫🇷 French mode** — Check this box to get prompts in French
-- **Open in VS Code** — Automatically opens the new folder in VS Code after generating
+- **Open With** — Choose Codex or VS Code for the generated folder. Codex is the default.
 
 ### What You Get
 
@@ -54,7 +54,8 @@ Software-Eng-Google/
 ├── Software-Eng-Google.txt     ← the job description
 ├── prompt.txt                  ← give this to ChatGPT/Copilot to tailor your resume
 ├── prompt-cover.txt            ← give this to ChatGPT/Copilot to write a cover letter
-└── resume-template.tex         ← your resume template, ready to edit
+├── resume-template.tex         ← your resume template, ready to edit
+└── latex_to_pdf.py             ← converts the LaTeX resume into Resume.pdf
 ```
 
 ### Scraping Tips
@@ -101,6 +102,7 @@ Everything below is for developers who want to understand the codebase, use the 
 - **Python 3.10+** (uses walrus operator and modern syntax)
 - **tkinter** — included with Python on Windows; on Linux install with `sudo apt install python3-tk` (Debian/Ubuntu) or `sudo dnf install python3-tkinter` (Fedora)
 - No other third-party packages required — uses only the Python standard library
+- **Optional:** `codex` on PATH for opening generated folders in Codex Desktop. VS Code is also supported when `code` is on PATH.
 - **Optional:** `pdflatex` on PATH for LaTeX → PDF compilation — install [MiKTeX](https://miktex.org/download) (Windows) or TeX Live (`sudo apt install texlive-latex-base` on Linux)
 - **Optional:** `cookies.txt` (Netscape format) in the project root for authenticated scraping — export cookies using [Cookie-Editor](https://cookie-editor.com/)
 
@@ -111,10 +113,11 @@ Everything below is for developers who want to understand the codebase, use the 
    | File | Purpose |
    |---|---|
    | `<folder>.txt` | Job description text + source URL |
-   | `prompt.txt` | AI prompt for tailoring `resume-template.tex` to the posting |
+   | `prompt.txt` | AI prompt for tailoring `resume-template.tex` and generating `Resume.pdf` |
    | `prompt-cover.txt` | AI prompt for generating a cover letter from `Resume.pdf` |
    | `resume-template.tex` | Copy of your LaTeX resume template, ready to edit |
-3. **Open** — Auto-opens the folder in VS Code (when `code` is on PATH).
+   | `latex_to_pdf.py` | Local helper script that compiles `resume-template.tex` into `Resume.pdf` |
+3. **Open** — Auto-opens the folder in Codex Desktop by default, or VS Code when selected.
 4. **Build** — Compiles `.tex` → `Resume.pdf` via `pdflatex` (auto-finds MiKTeX even if not on PATH).
 
 ## CLI Usage
@@ -124,6 +127,8 @@ Everything below is for developers who want to understand the codebase, use the 
 python run.py "<job_url>"
 python run.py -vf "<job_url>"
 python run.py -e "My-Job-Name"
+python run.py --open-with vscode "<job_url>"
+python run.py --open-with none "<job_url>"
 python run.py /path/to/resume.tex
 
 # Or directly
@@ -132,6 +137,7 @@ python job_tool.py "/path/to/page.html"
 python job_tool.py /path/to/resume.tex
 python job_tool.py -vf "<job_url>"
 python job_tool.py -e "My-Job-Name"
+python job_tool.py --open-with vscode "<job_url>"
 ```
 
 > **Tip:** Quote long URLs so shell characters (like `&`) don't break the command.
@@ -143,7 +149,7 @@ python run.py           # auto-opens GUI when no arguments given
 python gui.py            # launch GUI directly
 ```
 
-**Windows one-click:** Double-click `TurboApply.cmd` — auto-installs Python, MiKTeX, and pip packages if missing, then launches the GUI. Requires [winget](https://aka.ms/getwinget) (built into Windows 10/11).
+**Windows one-click:** Double-click `TurboApply.cmd` — auto-installs Python, Codex, MiKTeX, and pip packages if missing, then launches the GUI and closes the setup terminal. Requires [winget](https://aka.ms/getwinget) (built into Windows 10/11).
 **Linux one-click:** Double-click `TurboApply.desktop` — runs `TurboApply.sh` to set up a local `.venv`, install dependencies, and launch the GUI.
 
 ## Scraping Details
@@ -166,6 +172,7 @@ TurboApply.desktop   # Clickable Linux launcher entry
 run.py               # Unified launcher — GUI (no args) or CLI (with args)
 gui.py               # Cross-platform GUI application (tkinter)
 job_tool.py          # CLI entry point — dispatches scrape, process, or compile
+latex_to_pdf.py      # Helper copied into job folders to create Resume.pdf
 scraper.py           # Fetches & parses job postings (LinkedIn, Indeed, JSON-LD, HTML)
 processor.py         # Builds folder name, creates folder, writes files
 prompt_creator.py    # Loads prompt templates from templates/ or templates_vf/
@@ -186,4 +193,4 @@ python job_tool.py -vf -e "Mon-Poste"
 ## Platform Notes
 
 - **Windows:** Paths and Windows-reserved names (CON, PRN, etc.) are automatically handled. `pdflatex` is auto-discovered in common MiKTeX/TeX Live install directories even if not on PATH.
-- **Linux / macOS:** Ensure `pdflatex` is installed (`sudo apt install texlive-latex-base` or equivalent) for PDF builds. VS Code auto-open works when the `code` CLI is available.
+- **Linux / macOS:** Ensure `pdflatex` is installed (`sudo apt install texlive-latex-base` or equivalent) for PDF builds. Codex auto-open works when `codex` is available, and VS Code auto-open works when `code` is available.

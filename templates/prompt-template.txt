@@ -6,3 +6,6 @@ Edit resume-template.tex only using the following guidelines:
 condense lines as needed, but do not change formatting or structure.
 - Do not change dates, job titles and company names.
 - Reduce and condense the "Relevant Coursework" section by keeping the most related keywords to the job position.
+- After editing resume-template.tex, generate Resume.pdf by running:
+  python latex_to_pdf.py resume-template.tex
+- If LaTeX compilation fails, fix the LaTeX error in resume-template.tex and rerun the script until Resume.pdf is created successfully.

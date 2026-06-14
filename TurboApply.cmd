@@ -21,13 +21,19 @@ if %errorlevel% neq 0 (
 )
 
 :: ── Refresh PATH from registry ────────────────────────────────────
+call :refreshpath
+goto :after_refreshpath
+
 :refreshpath
 for /f "tokens=2*" %%a in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v Path 2^>nul') do set "SYSPATH=%%b"
 for /f "tokens=2*" %%a in ('reg query "HKCU\Environment" /v Path 2^>nul') do set "USRPATH=%%b"
-set "PATH=%SYSPATH%;%USRPATH%;%SystemRoot%;%SystemRoot%\System32"
+set "PATH=%SYSPATH%;%USRPATH%;%APPDATA%\npm;%SystemRoot%;%SystemRoot%\System32"
+exit /b 0
+
+:after_refreshpath
 
 :: ── Check / Install Python ────────────────────────────────────────
-echo  [1/5] Checking Python...
+echo  [1/6] Checking Python...
 
 :: Try to find python in PATH or common locations
 set "PYTHON="
@@ -78,7 +84,7 @@ if not defined PYTHON (
 for /f "tokens=*" %%v in ('"%PYTHON%" --version 2^>^&1') do echo        Using: %%v
 
 :: ── Check / Install pip packages ──────────────────────────────────
-echo  [2/5] Installing pip packages...
+echo  [2/6] Installing pip packages...
 "%PYTHON%" -m pip --version >nul 2>&1
 if %errorlevel% neq 0 (
     "%PYTHON%" -m ensurepip --upgrade >nul 2>&1
@@ -92,7 +98,7 @@ if exist "%~dp0requirements.txt" (
 )
 
 :: ── Check tkinter ─────────────────────────────────────────────────
-echo  [3/5] Checking tkinter...
+echo  [3/6] Checking tkinter...
 "%PYTHON%" -c "import tkinter" >nul 2>&1
 if %errorlevel% neq 0 (
     color 0E
@@ -112,7 +118,7 @@ if %errorlevel% neq 0 (
 echo        tkinter OK.
 
 :: ── Check / Install MiKTeX (pdflatex) ────────────────────────────
-echo  [4/5] Checking pdflatex (MiKTeX)...
+echo  [4/6] Checking pdflatex (MiKTeX)...
 
 set "PDFLATEX="
 where pdflatex >nul 2>&1 && set "PDFLATEX=found"
@@ -138,6 +144,42 @@ if not defined PDFLATEX (
     echo        pdflatex OK.
 )
 
+:: ── Check / Install Codex ─────────────────────────────────────────
+echo  [5/6] Checking Codex...
+
+set "CODEX="
+where codex >nul 2>&1 && set "CODEX=found"
+if not defined CODEX (
+    if exist "%APPDATA%\npm\codex.cmd" set "CODEX=found"
+)
+
+if not defined CODEX (
+    echo        Codex not found. Installing Codex...
+    echo        This may take a few minutes, please wait...
+    powershell -ExecutionPolicy ByPass -c "irm https://chatgpt.com/codex/install.ps1 | iex"
+    if !errorlevel! neq 0 (
+        color 0E
+        echo  [WARNING] Codex install failed. Generated folders can still open in VS Code.
+        echo           Install manually with:
+        echo           powershell -ExecutionPolicy ByPass -c "irm https://chatgpt.com/codex/install.ps1 | iex"
+    ) else (
+        call :refreshpath
+        where codex >nul 2>&1 && set "CODEX=found"
+        if not defined CODEX (
+            if exist "%APPDATA%\npm\codex.cmd" set "CODEX=found"
+        )
+        if defined CODEX (
+            echo        Codex installed successfully.
+        ) else (
+            color 0E
+            echo  [WARNING] Codex installer finished, but codex is not on PATH yet.
+            echo           Restart Windows or run the installer command manually if needed.
+        )
+    )
+) else (
+    echo        Codex OK.
+)
+
 :: ── Create cookies.txt if missing ─────────────────────────────────
 if not exist "%~dp0cookies.txt" (
     echo # Netscape HTTP Cookie File> "%~dp0cookies.txt"
@@ -147,7 +189,7 @@ if not exist "%~dp0cookies.txt" (
 )
 
 :: ── Launch GUI ────────────────────────────────────────────────────
-echo  [5/5] Launching Turbo Apply...
+echo  [6/6] Launching Turbo Apply...
 echo.
 color 0A
 echo  ========================================
@@ -156,7 +198,22 @@ echo  ========================================
 echo.
 
 cd /d "%~dp0"
-start "" "%PYTHON%" gui.py
 
-timeout /t 3 >nul
+set "PYTHON_GUI="
+set "PYTHONW_CANDIDATE="
+for /f "usebackq delims=" %%P in (`"%PYTHON%" -c "import pathlib, sys; print(pathlib.Path(sys.executable).with_name('pythonw.exe'))" 2^>nul`) do set "PYTHONW_CANDIDATE=%%P"
+if defined PYTHONW_CANDIDATE (
+    if exist "!PYTHONW_CANDIDATE!" set "PYTHON_GUI=!PYTHONW_CANDIDATE!"
+)
+if not defined PYTHON_GUI where pythonw >nul 2>&1 && set "PYTHON_GUI=pythonw"
+if not defined PYTHON_GUI set "PYTHON_GUI=%PYTHON%"
+
+set "TURBO_DIR=%~dp0"
+set "TURBO_GUI=%~dp0gui.py"
+powershell -NoProfile -ExecutionPolicy ByPass -WindowStyle Hidden -Command "Start-Process -FilePath $env:PYTHON_GUI -ArgumentList @($env:TURBO_GUI) -WorkingDirectory $env:TURBO_DIR -WindowStyle Hidden"
+if !errorlevel! neq 0 (
+    color 0C
+    echo  [ERROR] Turbo Apply failed to launch.
+    pause
+)
 exit /b 0

@@ -2,6 +2,7 @@
 """CLI for creating job application folders from job postings."""
 
 import argparse
+import platform
 import shutil
 import subprocess
 from pathlib import Path
@@ -10,6 +11,8 @@ from urllib.request import url2pathname
 
 import processor
 import scraper
+
+_CODEX_START_PROMPT = "follow both promts"
 
 
 def _find_pdflatex():
@@ -85,15 +88,85 @@ def _cleanup_aux(directory, stem):
             pass
 
 
-def _open_in_vscode(path):
-    code = shutil.which("code") or shutil.which("code.cmd")
-    if code:
+def _which_first(*names):
+    for name in names:
+        found = shutil.which(name)
+        if found:
+            return found
+    return None
+
+
+def _popen_silent(args):
+    kwargs = {
+        "stdout": subprocess.DEVNULL,
+        "stderr": subprocess.DEVNULL,
+    }
+    if platform.system() == "Windows" and hasattr(subprocess, "CREATE_NO_WINDOW"):
+        kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
+    return subprocess.Popen(args, **kwargs)
+
+
+def _open_in_codex(path):
+    names = ("codex.cmd", "codex.exe", "codex") if platform.system() == "Windows" else ("codex",)
+    codex = _which_first(*names)
+    if codex:
         try:
-            subprocess.Popen([code, str(path)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            _popen_silent([codex, "app", str(path)])
+            _send_codex_start_prompt()
             return True
         except OSError:
             pass
     return False
+
+
+def _open_in_vscode(path):
+    names = ("code.cmd", "code.exe", "code") if platform.system() == "Windows" else ("code",)
+    code = _which_first(*names)
+    if code:
+        try:
+            _popen_silent([code, str(path)])
+            return True
+        except OSError:
+            pass
+    return False
+
+
+def _open_workspace(path, opener):
+    if opener == "none":
+        return "None", True
+    if opener == "vscode":
+        return "VS Code", _open_in_vscode(path)
+    return "Codex", _open_in_codex(path)
+
+
+def _send_codex_start_prompt():
+    if platform.system() != "Windows":
+        return
+
+    script = (
+        f"$prompt = '{_CODEX_START_PROMPT}'; "
+        "Start-Sleep -Seconds 3; "
+        "$shell = New-Object -ComObject WScript.Shell; "
+        "for ($i = 0; $i -lt 20; $i++) { "
+        "if ($shell.AppActivate('Codex')) { "
+        "Start-Sleep -Milliseconds 300; "
+        "$shell.SendKeys($prompt + '{ENTER}'); "
+        "exit 0 "
+        "} "
+        "Start-Sleep -Milliseconds 500 "
+        "}"
+    )
+    flags = subprocess.CREATE_NO_WINDOW if hasattr(subprocess, "CREATE_NO_WINDOW") else 0
+    try:
+        subprocess.Popen(
+            ["powershell", "-NoProfile", "-ExecutionPolicy", "ByPass",
+             "-WindowStyle", "Hidden", "-Command", script],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            creationflags=flags,
+        )
+    except OSError:
+        pass
 
 
 def main():
@@ -101,6 +174,10 @@ def main():
     parser.add_argument("url", nargs="?", help="Job posting URL or .tex file path")
     parser.add_argument("-vf", action="store_true", help="French mode")
     parser.add_argument("-e", type=str, help="Empty template folder")
+    parser.add_argument(
+        "--open-with", choices=("codex", "vscode", "none"), default="codex",
+        help="Open generated folders with Codex, VS Code, or not at all (default: codex)",
+    )
     args = parser.parse_args()
 
     # if empty folder, skip whole process
@@ -110,10 +187,13 @@ def main():
         except ValueError as e:
             parser.error(str(e))
         print(f"Created: {result['folder_path']}")
-        if _open_in_vscode(result["folder_path"]):
-            print("Opened in VS Code")
+        if args.open_with != "none":
+            opener_name, opened = _open_workspace(result["folder_path"], args.open_with)
+            print(f"Opened in {opener_name}" if opened else f"Could not open in {opener_name}")
         if tpl := result.get("resume_template_path"):
             print(f"Template: {tpl}")
+        if script := result.get("latex_script_path"):
+            print(f"Script: {script}")
         print("Ended")
         return
 
@@ -141,10 +221,13 @@ def main():
     result = processor.process_job(job, Path.cwd(), target, french=args.vf)
 
     print(f"Created: {result['folder_path']}")
-    if _open_in_vscode(result["folder_path"]):
-        print("Opened in VS Code")
+    if args.open_with != "none":
+        opener_name, opened = _open_workspace(result["folder_path"], args.open_with)
+        print(f"Opened in {opener_name}" if opened else f"Could not open in {opener_name}")
     if tpl := result.get("resume_template_path"):
         print(f"Template: {tpl}")
+    if script := result.get("latex_script_path"):
+        print(f"Script: {script}")
 
 
 if __name__ == "__main__":

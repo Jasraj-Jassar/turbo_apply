@@ -5,3 +5,6 @@ Modifie le fichier resume-template.tex en suivant les directives suivantes:
 - Supprime le contenu non pertinent ou redondant. Tu peux supprimer, réécrire ou condenser des lignes si nécessaire, mais ne modifie pas la mise en forme et la structure et n'ajoute pas de nouvelles sections.
 - Ne modifie pas les dates, les intitulés de poste ni les noms des entreprises.
 - Réduis et condense la section « Cours pertinents » en conservant les mots-clés les plus liés au poste.
+- Après avoir modifié resume-template.tex, génère Resume.pdf avec la commande suivante :
+  python latex_to_pdf.py resume-template.tex
+- Si la compilation LaTeX échoue, corrige l'erreur dans resume-template.tex et relance le script jusqu'à ce que Resume.pdf soit créé correctement.
