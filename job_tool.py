@@ -5,6 +5,7 @@ import argparse
 import platform
 import shutil
 import subprocess
+import webbrowser
 from pathlib import Path
 from urllib.parse import urlparse
 from urllib.request import url2pathname
@@ -12,7 +13,11 @@ from urllib.request import url2pathname
 import processor
 import scraper
 
-_CODEX_START_PROMPT = "follow both promts"
+_CODEX_START_PROMPT = (
+    "Read prompt.txt and prompt-cover.txt. Only edit resume-template.tex and "
+    "create cover-letter.txt. Use the existing latex_to_pdf.py to create "
+    "Resume.pdf. Do not create, edit, or replace scripts or any other files."
+)
 
 
 def _find_pdflatex():
@@ -70,6 +75,13 @@ def _compile_resume(tex_arg):
     return path.parent / f"{stem}.pdf"
 
 
+def _open_pdf_in_browser(pdf_path):
+    try:
+        return webbrowser.open(Path(pdf_path).resolve().as_uri(), new=2)
+    except Exception:
+        return False
+
+
 def _parse_path(value):
     if value.lower().startswith("file://"):
         parsed = urlparse(value)
@@ -111,8 +123,13 @@ def _open_in_codex(path):
     codex = _which_first(*names)
     if codex:
         try:
-            _popen_silent([codex, "app", str(path)])
-            _send_codex_start_prompt()
+            if platform.system() == "Windows":
+                _popen_silent([
+                    "cmd.exe", "/c", "start", "Codex CLI", "/D", str(path),
+                    codex, "-C", str(path), _CODEX_START_PROMPT,
+                ])
+            else:
+                _popen_silent([codex, "-C", str(path), _CODEX_START_PROMPT])
             return True
         except OSError:
             pass
@@ -136,37 +153,7 @@ def _open_workspace(path, opener):
         return "None", True
     if opener == "vscode":
         return "VS Code", _open_in_vscode(path)
-    return "Codex", _open_in_codex(path)
-
-
-def _send_codex_start_prompt():
-    if platform.system() != "Windows":
-        return
-
-    script = (
-        f"$prompt = '{_CODEX_START_PROMPT}'; "
-        "Start-Sleep -Seconds 3; "
-        "$shell = New-Object -ComObject WScript.Shell; "
-        "for ($i = 0; $i -lt 20; $i++) { "
-        "if ($shell.AppActivate('Codex')) { "
-        "Start-Sleep -Milliseconds 300; "
-        "$shell.SendKeys($prompt + '{ENTER}'); "
-        "exit 0 "
-        "} "
-        "Start-Sleep -Milliseconds 500 "
-        "}"
-    )
-    flags = subprocess.CREATE_NO_WINDOW if hasattr(subprocess, "CREATE_NO_WINDOW") else 0
-    try:
-        subprocess.Popen(
-            ["powershell", "-NoProfile", "-ExecutionPolicy", "ByPass",
-             "-WindowStyle", "Hidden", "-Command", script],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            creationflags=flags,
-        )
-    except OSError:
-        pass
+    return "Codex CLI", _open_in_codex(path)
 
 
 def main():
@@ -214,6 +201,8 @@ def main():
         except Exception as e:
             raise SystemExit(str(e)) from e
         print(f"Created: {pdf}")
+        if _open_pdf_in_browser(pdf):
+            print("Opened PDF in browser")
         return
 
     # URL → scrape and process

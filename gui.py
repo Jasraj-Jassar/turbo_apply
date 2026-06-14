@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import threading
 import tkinter as tk
+import webbrowser
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 from urllib.parse import urlparse
@@ -32,7 +33,11 @@ _FONT = ("Segoe UI", 11) if platform.system() == "Windows" else ("Helvetica", 11
 _FONT_SM = (_FONT[0], 9)
 _FONT_LG = (_FONT[0], 14, "bold")
 _FONT_MONO = ("Consolas", 10) if platform.system() == "Windows" else ("Monospace", 10)
-_CODEX_START_PROMPT = "follow both promts"
+_CODEX_START_PROMPT = (
+    "Read prompt.txt and prompt-cover.txt. Only edit resume-template.tex and "
+    "create cover-letter.txt. Use the existing latex_to_pdf.py to create "
+    "Resume.pdf. Do not create, edit, or replace scripts or any other files."
+)
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
@@ -107,6 +112,13 @@ def _compile_resume(tex_arg):
     return path.parent / f"{stem}.pdf"
 
 
+def _open_pdf_in_browser(pdf_path):
+    try:
+        return webbrowser.open(Path(pdf_path).resolve().as_uri(), new=2)
+    except Exception:
+        return False
+
+
 def _which_first(*names):
     for name in names:
         found = shutil.which(name)
@@ -130,8 +142,13 @@ def _open_in_codex(path):
     codex = _which_first(*names)
     if codex:
         try:
-            _popen_silent([codex, "app", str(path)])
-            _send_codex_start_prompt()
+            if platform.system() == "Windows":
+                _popen_silent([
+                    "cmd.exe", "/c", "start", "Codex CLI", "/D", str(path),
+                    codex, "-C", str(path), _CODEX_START_PROMPT,
+                ])
+            else:
+                _popen_silent([codex, "-C", str(path), _CODEX_START_PROMPT])
             return True
         except OSError:
             pass
@@ -153,37 +170,7 @@ def _open_in_vscode(path):
 def _open_workspace(path, opener):
     if opener == "vscode":
         return "VS Code", _open_in_vscode(path)
-    return "Codex", _open_in_codex(path)
-
-
-def _send_codex_start_prompt():
-    if platform.system() != "Windows":
-        return
-
-    script = (
-        f"$prompt = '{_CODEX_START_PROMPT}'; "
-        "Start-Sleep -Seconds 3; "
-        "$shell = New-Object -ComObject WScript.Shell; "
-        "for ($i = 0; $i -lt 20; $i++) { "
-        "if ($shell.AppActivate('Codex')) { "
-        "Start-Sleep -Milliseconds 300; "
-        "$shell.SendKeys($prompt + '{ENTER}'); "
-        "exit 0 "
-        "} "
-        "Start-Sleep -Milliseconds 500 "
-        "}"
-    )
-    flags = subprocess.CREATE_NO_WINDOW if hasattr(subprocess, "CREATE_NO_WINDOW") else 0
-    try:
-        subprocess.Popen(
-            ["powershell", "-NoProfile", "-ExecutionPolicy", "ByPass",
-             "-WindowStyle", "Hidden", "-Command", script],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            creationflags=flags,
-        )
-    except OSError:
-        pass
+    return "Codex CLI", _open_in_codex(path)
 
 
 def _open_folder(path):
@@ -319,7 +306,7 @@ class TurboApplyApp(tk.Tk):
         tk.Label(side, text="after Generate", font=_FONT_SM,
                  bg=_BG_LIGHT, fg=_FG_DIM).pack(anchor="w", padx=12, pady=(0, 10))
 
-        for val, label in [("codex", "Codex"), ("vscode", "VS Code")]:
+        for val, label in [("codex", "Codex CLI"), ("vscode", "VS Code")]:
             tk.Radiobutton(
                 side, text=label, variable=self._open_with, value=val,
                 font=_FONT, bg=_BG_LIGHT, fg=_FG, selectcolor=_BG_INPUT,
@@ -687,6 +674,10 @@ class TurboApplyApp(tk.Tk):
             pdf = _compile_resume(tex_path)
             self._last_folder = pdf.parent
             self.after(0, self._log_msg, f"Created: {pdf}", "success")
+            if _open_pdf_in_browser(pdf):
+                self.after(0, self._log_msg, "Opened PDF in browser", "accent")
+            else:
+                self.after(0, self._log_msg, "PDF created, but browser did not open.", "warn")
             self.after(0, self._set_status, f"PDF ready — {pdf.name}", _SUCCESS)
             self.after(0, lambda: self._open_folder_btn.config(state=tk.NORMAL))
 

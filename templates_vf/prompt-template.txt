@@ -1,4 +1,6 @@
 Modifie le fichier resume-template.tex en suivant les directives suivantes:
+- Portée : modifie seulement resume-template.tex et crée Resume.pdf. Ne crée, modifie, renomme ou supprime aucun autre fichier.
+- N'écris pas de convertisseur PDF, ne modifie pas latex_to_pdf.py et n'exécute pas pdflatex directement. Utilise seulement l'outil existant.
 - Révise le texte existant pour l'aligner à la description du poste ci-dessous.
 - Utilise des mots-clés et concepts pertinents, sans reprendre de phrases mot pour mot.
 - Assures toi que les compétences requises du poste sont mises en évidence dans le CV.
@@ -8,3 +10,4 @@ Modifie le fichier resume-template.tex en suivant les directives suivantes:
 - Après avoir modifié resume-template.tex, génère Resume.pdf avec la commande suivante :
   python latex_to_pdf.py resume-template.tex
 - Si la compilation LaTeX échoue, corrige l'erreur dans resume-template.tex et relance le script jusqu'à ce que Resume.pdf soit créé correctement.
+- Si Resume.aux, Resume.log ou d'autres fichiers temporaires LaTeX restent, supprime-les après la création de Resume.pdf.

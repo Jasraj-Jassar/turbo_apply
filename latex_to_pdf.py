@@ -5,6 +5,7 @@ import argparse
 import platform
 import shutil
 import subprocess
+import webbrowser
 from pathlib import Path
 
 
@@ -87,6 +88,13 @@ def compile_resume(tex_path, output_stem="Resume"):
     return path.parent / f"{output_stem}.pdf"
 
 
+def open_pdf_in_browser(pdf_path):
+    try:
+        return webbrowser.open(Path(pdf_path).resolve().as_uri(), new=2)
+    except Exception:
+        return False
+
+
 def main():
     parser = argparse.ArgumentParser(description="Compile a .tex resume into Resume.pdf.")
     parser.add_argument(
@@ -99,6 +107,8 @@ def main():
 
     pdf = compile_resume(args.tex_file)
     print(f"Created: {pdf}")
+    if open_pdf_in_browser(pdf):
+        print("Opened in browser")
 
 
 if __name__ == "__main__":

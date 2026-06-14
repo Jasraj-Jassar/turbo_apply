@@ -1,4 +1,6 @@
 Edit resume-template.tex only using the following guidelines:
+- Scope: only edit resume-template.tex and create Resume.pdf. Do not create, edit, rename, or delete any other files.
+- Do not write a PDF converter, do not edit latex_to_pdf.py, and do not run pdflatex directly. Use the existing tool only.
 - Revise the existing text to align with the job description below. 
 - Use relevant keywords and concepts, not verbatim sentences. 
 - Make sure that the position's required skills are clearly shown in the resume.
@@ -9,3 +11,4 @@ condense lines as needed, but do not change formatting or structure.
 - After editing resume-template.tex, generate Resume.pdf by running:
   python latex_to_pdf.py resume-template.tex
 - If LaTeX compilation fails, fix the LaTeX error in resume-template.tex and rerun the script until Resume.pdf is created successfully.
+- If Resume.aux, Resume.log, or other LaTeX temporary files remain, remove them after Resume.pdf is created.

@@ -14,7 +14,7 @@ Click the green **Code** button on this page → **Download ZIP**. Extract the f
 
 Double-click **`TurboApply.cmd`** inside the folder.
 
-That's it. The script will automatically install everything your computer needs (Python, Codex, LaTeX tools, etc.) and open the app. This only happens the first time — after that it just opens instantly.
+That's it. The script will automatically install everything your computer needs (Python, Codex CLI, LaTeX tools, etc.) and open the app. This only happens the first time — after that it just opens instantly.
 
 > If Windows shows a "Windows protected your PC" popup, click **More info** → **Run anyway**. This is normal for downloaded scripts.
 
@@ -38,12 +38,12 @@ The app opens with three modes at the top. Pick the one you need:
 1. Switch to **Compile LaTeX** mode
 2. Click **Browse** and pick your `.tex` file
 3. Click **📄 Compile PDF**
-4. Your `Resume.pdf` appears next to the `.tex` file
+4. Your `Resume.pdf` appears next to the `.tex` file and opens in your browser
 
 ### Options
 
 - **🇫🇷 French mode** — Check this box to get prompts in French
-- **Open With** — Choose Codex or VS Code for the generated folder. Codex is the default.
+- **Open With** — Choose Codex CLI or VS Code for the generated folder. Codex CLI is the default.
 
 ### What You Get
 
@@ -102,7 +102,7 @@ Everything below is for developers who want to understand the codebase, use the 
 - **Python 3.10+** (uses walrus operator and modern syntax)
 - **tkinter** — included with Python on Windows; on Linux install with `sudo apt install python3-tk` (Debian/Ubuntu) or `sudo dnf install python3-tkinter` (Fedora)
 - No other third-party packages required — uses only the Python standard library
-- **Optional:** `codex` on PATH for opening generated folders in Codex Desktop. VS Code is also supported when `code` is on PATH.
+- **Optional:** `codex` on PATH for opening generated folders in the Codex CLI. VS Code is also supported when `code` is on PATH.
 - **Optional:** `pdflatex` on PATH for LaTeX → PDF compilation — install [MiKTeX](https://miktex.org/download) (Windows) or TeX Live (`sudo apt install texlive-latex-base` on Linux)
 - **Optional:** `cookies.txt` (Netscape format) in the project root for authenticated scraping — export cookies using [Cookie-Editor](https://cookie-editor.com/)
 
@@ -117,8 +117,8 @@ Everything below is for developers who want to understand the codebase, use the 
    | `prompt-cover.txt` | AI prompt for generating a cover letter from `Resume.pdf` |
    | `resume-template.tex` | Copy of your LaTeX resume template, ready to edit |
    | `latex_to_pdf.py` | Local helper script that compiles `resume-template.tex` into `Resume.pdf` |
-3. **Open** — Auto-opens the folder in Codex Desktop by default, or VS Code when selected.
-4. **Build** — Compiles `.tex` → `Resume.pdf` via `pdflatex` (auto-finds MiKTeX even if not on PATH).
+3. **Open** — Auto-opens the folder in the Codex CLI by default, or VS Code when selected.
+4. **Build** — Compiles `.tex` → `Resume.pdf` via `pdflatex` and opens it in your browser.
 
 ## CLI Usage
 
@@ -149,7 +149,7 @@ python run.py           # auto-opens GUI when no arguments given
 python gui.py            # launch GUI directly
 ```
 
-**Windows one-click:** Double-click `TurboApply.cmd` — auto-installs Python, Codex, MiKTeX, and pip packages if missing, then launches the GUI and closes the setup terminal. Requires [winget](https://aka.ms/getwinget) (built into Windows 10/11).
+**Windows one-click:** Double-click `TurboApply.cmd` — auto-installs Python, Codex CLI, MiKTeX, and pip packages if missing, then launches the GUI and closes the setup terminal. Requires [winget](https://aka.ms/getwinget) (built into Windows 10/11).
 **Linux one-click:** Double-click `TurboApply.desktop` — runs `TurboApply.sh` to set up a local `.venv`, install dependencies, and launch the GUI.
 
 ## Scraping Details

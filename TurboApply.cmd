@@ -146,8 +146,8 @@ if not defined PDFLATEX (
     echo        pdflatex OK.
 )
 
-:: ── Check / Install Codex ─────────────────────────────────────────
-echo  [5/6] Checking Codex...
+:: ── Check / Install Codex CLI ─────────────────────────────────────
+echo  [5/6] Checking Codex CLI...
 
 set "CODEX="
 where codex >nul 2>&1 && set "CODEX=found"
@@ -156,12 +156,12 @@ if not defined CODEX (
 )
 
 if not defined CODEX (
-    echo        Codex not found. Installing Codex...
+    echo        Codex CLI not found. Installing Codex CLI...
     echo        This may take a few minutes, please wait...
     "%POWERSHELL_EXE%" -ExecutionPolicy ByPass -c "irm https://chatgpt.com/codex/install.ps1 | iex"
     if !errorlevel! neq 0 (
         color 0E
-        echo  [WARNING] Codex install failed. Generated folders can still open in VS Code.
+        echo  [WARNING] Codex CLI install failed. Generated folders can still open in VS Code.
         echo           Install manually with:
         echo           "%POWERSHELL_EXE%" -ExecutionPolicy ByPass -c "irm https://chatgpt.com/codex/install.ps1 | iex"
     ) else (
@@ -171,15 +171,15 @@ if not defined CODEX (
             if exist "%APPDATA%\npm\codex.cmd" set "CODEX=found"
         )
         if defined CODEX (
-            echo        Codex installed successfully.
+            echo        Codex CLI installed successfully.
         ) else (
             color 0E
-            echo  [WARNING] Codex installer finished, but codex is not on PATH yet.
+            echo  [WARNING] Codex CLI installer finished, but codex is not on PATH yet.
             echo           Restart Windows or run the installer command manually if needed.
         )
     )
 ) else (
-    echo        Codex OK.
+    echo        Codex CLI OK.
 )
 
 :: ── Create cookies.txt if missing ─────────────────────────────────
