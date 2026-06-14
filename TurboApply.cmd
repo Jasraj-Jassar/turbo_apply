@@ -27,7 +27,9 @@ goto :after_refreshpath
 :refreshpath
 for /f "tokens=2*" %%a in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v Path 2^>nul') do set "SYSPATH=%%b"
 for /f "tokens=2*" %%a in ('reg query "HKCU\Environment" /v Path 2^>nul') do set "USRPATH=%%b"
-set "PATH=%SYSPATH%;%USRPATH%;%APPDATA%\npm;%SystemRoot%;%SystemRoot%\System32"
+set "PATH=%SYSPATH%;%USRPATH%;%APPDATA%\npm;%SystemRoot%;%SystemRoot%\System32;%SystemRoot%\System32\WindowsPowerShell\v1.0"
+set "POWERSHELL_EXE=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe"
+if not exist "%POWERSHELL_EXE%" set "POWERSHELL_EXE=powershell"
 exit /b 0
 
 :after_refreshpath
@@ -156,12 +158,12 @@ if not defined CODEX (
 if not defined CODEX (
     echo        Codex not found. Installing Codex...
     echo        This may take a few minutes, please wait...
-    powershell -ExecutionPolicy ByPass -c "irm https://chatgpt.com/codex/install.ps1 | iex"
+    "%POWERSHELL_EXE%" -ExecutionPolicy ByPass -c "irm https://chatgpt.com/codex/install.ps1 | iex"
     if !errorlevel! neq 0 (
         color 0E
         echo  [WARNING] Codex install failed. Generated folders can still open in VS Code.
         echo           Install manually with:
-        echo           powershell -ExecutionPolicy ByPass -c "irm https://chatgpt.com/codex/install.ps1 | iex"
+        echo           "%POWERSHELL_EXE%" -ExecutionPolicy ByPass -c "irm https://chatgpt.com/codex/install.ps1 | iex"
     ) else (
         call :refreshpath
         where codex >nul 2>&1 && set "CODEX=found"
@@ -193,7 +195,7 @@ echo  [6/6] Launching Turbo Apply...
 echo.
 color 0A
 echo  ========================================
-echo    All set! Starting Turbo Apply...
+echo    All set. Starting Turbo Apply...
 echo  ========================================
 echo.
 
@@ -210,7 +212,7 @@ if not defined PYTHON_GUI set "PYTHON_GUI=%PYTHON%"
 
 set "TURBO_DIR=%~dp0"
 set "TURBO_GUI=%~dp0gui.py"
-powershell -NoProfile -ExecutionPolicy ByPass -WindowStyle Hidden -Command "Start-Process -FilePath $env:PYTHON_GUI -ArgumentList @($env:TURBO_GUI) -WorkingDirectory $env:TURBO_DIR -WindowStyle Hidden"
+start "" /D "%TURBO_DIR%" "%PYTHON_GUI%" "%TURBO_GUI%"
 if !errorlevel! neq 0 (
     color 0C
     echo  [ERROR] Turbo Apply failed to launch.
