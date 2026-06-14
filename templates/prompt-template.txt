@@ -12,5 +12,5 @@ condense lines as needed, but do not change formatting or structure.
 - After editing resume-template.tex, generate Resume.pdf by running:
   python latex_to_pdf.py resume-template.tex
 - The converter tool opens Resume.pdf in the browser after a successful build; do not add any separate PDF-opening step.
-- If LaTeX compilation fails because of resume body content you changed, fix only that content and rerun the script. If it fails because a .sty/.cls package is missing, stop and report the converter error without changing the template preamble.
+- If LaTeX compilation fails because of resume body content you changed, fix only that content and rerun the script. If it fails because a .sty/.cls package or font is missing, stop and report the converter error without changing the template preamble.
 - If Resume.aux, Resume.log, or other LaTeX temporary files remain, remove them after Resume.pdf is created.

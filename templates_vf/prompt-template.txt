@@ -11,5 +11,5 @@ Modifie le fichier resume-template.tex en suivant les directives suivantes:
 - Après avoir modifié resume-template.tex, génère Resume.pdf avec la commande suivante :
   python latex_to_pdf.py resume-template.tex
 - L'outil de conversion ouvre Resume.pdf dans le navigateur après une compilation réussie; n'ajoute pas d'étape séparée pour ouvrir le PDF.
-- Si la compilation LaTeX échoue à cause du contenu du CV que tu as modifié, corrige seulement ce contenu et relance le script. Si l'échec vient d'un package .sty/.cls manquant, arrête-toi et signale l'erreur du convertisseur sans modifier le préambule du modèle.
+- Si la compilation LaTeX échoue à cause du contenu du CV que tu as modifié, corrige seulement ce contenu et relance le script. Si l'échec vient d'un package .sty/.cls ou d'une police manquante, arrête-toi et signale l'erreur du convertisseur sans modifier le préambule du modèle.
 - Si Resume.aux, Resume.log ou d'autres fichiers temporaires LaTeX restent, supprime-les après la création de Resume.pdf.

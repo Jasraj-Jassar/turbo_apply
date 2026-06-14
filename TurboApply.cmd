@@ -2,13 +2,15 @@
 setlocal EnableDelayedExpansion
 title Turbo Apply - Setup ^& Launch
 color 0B
+if /i "%~1"=="--check-only" set "TURBO_APPLY_CHECK_ONLY=1"
+if /i "%~1"=="--no-launch" set "TURBO_APPLY_CHECK_ONLY=1"
 echo.
 echo  ========================================
 echo    Turbo Apply - One-Click Setup
 echo  ========================================
 echo.
 
-:: ── Check for winget ──────────────────────────────────────────────
+rem Check for winget
 where winget >nul 2>&1
 if %errorlevel% neq 0 (
     color 0C
@@ -20,24 +22,22 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-:: ── Refresh PATH from registry ────────────────────────────────────
+rem Refresh PATH with common install locations used by this launcher.
 call :refreshpath
 goto :after_refreshpath
 
 :refreshpath
-for /f "tokens=2*" %%a in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v Path 2^>nul') do set "SYSPATH=%%b"
-for /f "tokens=2*" %%a in ('reg query "HKCU\Environment" /v Path 2^>nul') do set "USRPATH=%%b"
-set "PATH=%SYSPATH%;%USRPATH%;%APPDATA%\npm;%SystemRoot%;%SystemRoot%\System32;%SystemRoot%\System32\WindowsPowerShell\v1.0"
 set "POWERSHELL_EXE=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe"
 if not exist "%POWERSHELL_EXE%" set "POWERSHELL_EXE=powershell"
+set "PATH=%PATH%;%APPDATA%\npm;%LOCALAPPDATA%\Programs\Python\Python313;%LOCALAPPDATA%\Programs\Python\Python312;%LOCALAPPDATA%\Programs\Python\Python311;%LOCALAPPDATA%\Programs\MiKTeX\miktex\bin\x64;C:\Program Files\MiKTeX\miktex\bin\x64;%SystemRoot%;%SystemRoot%\System32;%SystemRoot%\System32\WindowsPowerShell\v1.0"
 exit /b 0
 
 :after_refreshpath
 
-:: ── Check / Install Python ────────────────────────────────────────
+rem Check / Install Python
 echo  [1/6] Checking Python...
 
-:: Try to find python in PATH or common locations
+rem Try to find python in PATH or common locations
 set "PYTHON="
 where python >nul 2>&1 && set "PYTHON=python"
 if not defined PYTHON (
@@ -67,7 +67,7 @@ if not defined PYTHON (
         exit /b 1
     )
     echo        Python installed successfully.
-    :: Refresh PATH and find the new Python
+    rem Refresh PATH and find the new Python
     call :refreshpath
     where python >nul 2>&1 && set "PYTHON=python"
     if not defined PYTHON (
@@ -82,10 +82,10 @@ if not defined PYTHON (
     )
 )
 
-:: Show which Python we're using
+rem Show which Python we're using
 for /f "tokens=*" %%v in ('"%PYTHON%" --version 2^>^&1') do echo        Using: %%v
 
-:: ── Check / Install pip packages ──────────────────────────────────
+rem Check / Install pip packages
 echo  [2/6] Installing pip packages...
 "%PYTHON%" -m pip --version >nul 2>&1
 if %errorlevel% neq 0 (
@@ -99,7 +99,7 @@ if exist "%~dp0requirements.txt" (
     echo        No requirements.txt found, skipping.
 )
 
-:: ── Check tkinter ─────────────────────────────────────────────────
+rem Check tkinter
 echo  [3/6] Checking tkinter...
 "%PYTHON%" -c "import tkinter" >nul 2>&1
 if %errorlevel% neq 0 (
@@ -119,7 +119,7 @@ if %errorlevel% neq 0 (
 )
 echo        tkinter OK.
 
-:: ── Check / Install MiKTeX (pdflatex) ────────────────────────────
+rem Check / Install MiKTeX (pdflatex)
 echo  [4/6] Checking pdflatex (MiKTeX)...
 
 set "PDFLATEX="
@@ -185,7 +185,7 @@ if defined INITEXMF (
 )
 echo        LaTeX package prep done.
 
-:: ── Check / Install Codex CLI ─────────────────────────────────────
+rem Check / Install Codex CLI
 echo  [5/6] Checking Codex CLI...
 
 set "CODEX="
@@ -221,7 +221,7 @@ if not defined CODEX (
     echo        Codex CLI OK.
 )
 
-:: ── Create cookies.txt if missing ─────────────────────────────────
+rem Create cookies.txt if missing
 if not exist "%~dp0cookies.txt" (
     echo # Netscape HTTP Cookie File> "%~dp0cookies.txt"
     echo # https://cookie-editor.com/ - Export cookies in Netscape format and paste them here>> "%~dp0cookies.txt"
@@ -229,9 +229,18 @@ if not exist "%~dp0cookies.txt" (
     echo        Created empty cookies.txt — paste your browser cookies here if needed.
 )
 
-:: ── Launch GUI ────────────────────────────────────────────────────
+rem Launch GUI
 echo  [6/6] Launching Turbo Apply...
 echo.
+if defined TURBO_APPLY_CHECK_ONLY (
+    color 0A
+    echo  ========================================
+    echo    All set. Check-only mode passed.
+    echo  ========================================
+    echo.
+    exit /b 0
+)
+
 color 0A
 echo  ========================================
 echo    All set. Starting Turbo Apply...

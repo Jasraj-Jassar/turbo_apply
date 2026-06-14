@@ -8,8 +8,8 @@ import shutil
 import subprocess
 import webbrowser
 from pathlib import Path
-
-_MIKTEX_PACKAGES = ("geometry", "parskip", "enumitem", "hyperref", "ec", "cm-super")
+from urllib.parse import urlparse
+from urllib.request import url2pathname
 
 
 def _cleanup_aux(directory, stem):
@@ -28,6 +28,17 @@ def _cleanup_aux(directory, stem):
             (directory / f"{stem}{ext}").unlink()
         except OSError:
             pass
+
+
+def _parse_path(value):
+    value = str(value)
+    if value.lower().startswith("file://"):
+        parsed = urlparse(value)
+        path = parsed.path or ""
+        if parsed.netloc and parsed.netloc not in ("", "localhost"):
+            path = f"//{parsed.netloc}{path}"
+        value = url2pathname(path)
+    return Path(value).expanduser().resolve()
 
 
 def _find_pdflatex():
@@ -57,88 +68,6 @@ def _find_pdflatex():
     return None
 
 
-def _find_initexmf(pdflatex=None):
-    found = shutil.which("initexmf")
-    if found:
-        return found
-
-    if pdflatex:
-        candidate = Path(pdflatex).with_name("initexmf.exe")
-        if candidate.exists():
-            return str(candidate)
-
-    return None
-
-
-def _find_mpm(pdflatex=None):
-    found = shutil.which("mpm")
-    if found:
-        return found
-
-    if pdflatex:
-        candidate = Path(pdflatex).with_name("mpm.exe")
-        if candidate.exists():
-            return str(candidate)
-
-    return None
-
-
-def _enable_miktex_installer(pdflatex=None):
-    if platform.system() != "Windows":
-        return
-
-    initexmf = _find_initexmf(pdflatex)
-    if not initexmf:
-        return
-
-    subprocess.run(
-        [initexmf, "--enable-installer"],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        check=False,
-    )
-
-
-def _install_miktex_packages(pdflatex=None):
-    if platform.system() != "Windows":
-        return
-
-    mpm = _find_mpm(pdflatex)
-    if not mpm:
-        return
-
-    for package in _MIKTEX_PACKAGES:
-        subprocess.run(
-            [mpm, f"--install={package}", "--quiet"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            check=False,
-        )
-
-
-def _refresh_miktex_fonts(pdflatex=None):
-    if platform.system() != "Windows":
-        return
-
-    initexmf = _find_initexmf(pdflatex)
-    if not initexmf:
-        return
-
-    for option in ("--update-fndb", "--mkmaps"):
-        subprocess.run(
-            [initexmf, option],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            check=False,
-        )
-
-
-def _prepare_miktex(pdflatex=None):
-    _enable_miktex_installer(pdflatex)
-    _install_miktex_packages(pdflatex)
-    _refresh_miktex_fonts(pdflatex)
-
-
 def _missing_latex_file(output):
     match = re.search(r"(?:LaTeX Error:\s*)?File [`']([^`']+\.(?:sty|cls))[`'] not found", output or "")
     return match.group(1) if match else None
@@ -156,11 +85,12 @@ def _run_pdflatex(command, directory):
         capture_output=True,
         text=True,
         check=False,
+        timeout=120,
     )
 
 
 def compile_resume(tex_path, output_stem="Resume"):
-    path = Path(tex_path).expanduser().resolve()
+    path = _parse_path(tex_path)
     if path.suffix.lower() != ".tex" or not path.is_file():
         raise ValueError(f"Invalid .tex file: {path}")
 
@@ -170,18 +100,27 @@ def compile_resume(tex_path, output_stem="Resume"):
             "pdflatex not found. Install MiKTeX or TeX Live, then rerun this script."
         )
 
-    _prepare_miktex(pdflatex)
+    output_pdf = path.parent / f"{output_stem}.pdf"
+    try:
+        output_pdf.unlink()
+    except OSError:
+        pass
+
     _cleanup_aux(path.parent, output_stem)
     command = [pdflatex, "-interaction=nonstopmode", f"-jobname={output_stem}", path.name]
-    if platform.system() == "Windows":
-        command.insert(1, "--enable-installer")
 
     try:
-        result = _run_pdflatex(command, path.parent)
-        output = result.stdout or result.stderr
-        if result.returncode != 0 and (_missing_latex_file(output) or _missing_latex_font(output)):
-            _prepare_miktex(pdflatex)
+        try:
             result = _run_pdflatex(command, path.parent)
+        except subprocess.TimeoutExpired as e:
+            raise RuntimeError(
+                "pdflatex timed out after 120 seconds. This is a LaTeX/MiKTeX "
+                "setup issue, not permission to rewrite the resume template. "
+                "Close other MiKTeX/LaTeX processes, run TurboApply.cmd once to "
+                "prepare required packages and fonts, then rerun this script."
+            ) from e
+
+        output = "\n".join(part for part in (result.stdout, result.stderr) if part)
     finally:
         _cleanup_aux(path.parent, output_stem)
 
@@ -192,22 +131,25 @@ def compile_resume(tex_path, output_stem="Resume"):
             raise RuntimeError(
                 f"pdflatex failed because MiKTeX is missing {missing_file}.\n"
                 "This is a LaTeX installation issue, not a resume-template.tex "
-                "content issue. Install or update MiKTeX packages, then rerun "
-                "this script. Do not remove LaTeX packages or rewrite the "
-                "template preamble to work around this."
+                "content issue. Run TurboApply.cmd once to install required "
+                "LaTeX packages, then rerun this script. Do not remove LaTeX "
+                "packages or rewrite the template preamble to work around this."
             )
         missing_font = _missing_latex_font(output)
         if missing_font:
             raise RuntimeError(
                 f"pdflatex failed because MiKTeX is missing font data for {missing_font}.\n"
                 "This is a MiKTeX package/font-map issue, not a resume-template.tex "
-                "content issue. Run TurboApply.cmd again to prepare LaTeX packages, "
+                "content issue. Run TurboApply.cmd once to prepare LaTeX packages, "
                 "then rerun this script. Do not remove LaTeX packages or rewrite "
                 "the template preamble to work around this."
             )
         raise RuntimeError(f"pdflatex failed:\n{output}")
 
-    return path.parent / f"{output_stem}.pdf"
+    if not output_pdf.is_file() or output_pdf.stat().st_size == 0:
+        raise RuntimeError(f"pdflatex finished but did not create {output_pdf.name}.")
+
+    return output_pdf
 
 
 def open_pdf_in_browser(pdf_path):

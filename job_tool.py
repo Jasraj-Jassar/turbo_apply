@@ -5,113 +5,28 @@ import argparse
 import platform
 import shutil
 import subprocess
-import webbrowser
 from pathlib import Path
-from urllib.parse import urlparse
-from urllib.request import url2pathname
 
+import latex_to_pdf
 import processor
 import scraper
 
 _CODEX_START_PROMPT = (
-    "Read prompt.txt and prompt-cover.txt. Only edit resume-template.tex and "
-    "create cover-letter.txt. Use the existing latex_to_pdf.py to create "
-    "Resume.pdf. Do not create, edit, or replace scripts or any other files. "
-    "Do not change the LaTeX preamble, documentclass, or usepackage lines. "
-    "If the converter reports a missing LaTeX package, stop and report it."
+    "Follow both prompts: read prompt.txt and prompt-cover.txt. Only edit "
+    "resume-template.tex and create cover-letter.txt. Use the existing "
+    "latex_to_pdf.py to create Resume.pdf. Do not create, edit, or replace "
+    "scripts or any other files. Do not change the LaTeX preamble, "
+    "documentclass, or usepackage lines. If the converter reports a missing "
+    "LaTeX package or font, stop and report it."
 )
 
 
-def _find_pdflatex():
-    """Locate pdflatex on PATH or in common install directories."""
-    import platform as _plat
-    found = shutil.which("pdflatex")
-    if found:
-        return found
-    if _plat.system() == "Windows":
-        candidates = [
-            Path.home() / "AppData/Local/Programs/MiKTeX/miktex/bin/x64/pdflatex.exe",
-            Path("C:/Program Files/MiKTeX/miktex/bin/x64/pdflatex.exe"),
-            Path("C:/Program Files (x86)/MiKTeX/miktex/bin/x64/pdflatex.exe"),
-            Path.home() / "AppData/Local/Programs/MiKTeX/miktex/bin/pdflatex.exe",
-        ]
-        texlive = Path("C:/texlive")
-        if texlive.exists():
-            for year_dir in sorted(texlive.iterdir(), reverse=True):
-                cand = year_dir / "bin/windows/pdflatex.exe"
-                if cand.exists():
-                    return str(cand)
-        for c in candidates:
-            if c.exists():
-                return str(c)
-    return None
-
-
 def _compile_resume(tex_arg):
-    path = _parse_path(tex_arg)
-    if path.suffix.lower() != ".tex" or not path.is_file():
-        raise ValueError(f"Invalid .tex file: {path}")
-
-    stem = "Resume"
-    _cleanup_aux(path.parent, stem)
-
-    pdflatex = _find_pdflatex()
-    if not pdflatex:
-        raise RuntimeError(
-            "pdflatex not found. Install MiKTeX (https://miktex.org/download) "
-            "or TeX Live, then restart this application."
-        )
-
-    try:
-        result = subprocess.run(
-            [pdflatex, "--enable-installer", "-interaction=nonstopmode",
-             f"-jobname={stem}", path.name],
-            cwd=path.parent, capture_output=True, text=True
-        )
-    finally:
-        _cleanup_aux(path.parent, stem)
-
-    if result.returncode != 0:
-        raise RuntimeError(f"pdflatex failed:\n{result.stdout}")
-
-    return path.parent / f"{stem}.pdf"
+    return latex_to_pdf.compile_resume(tex_arg)
 
 
 def _open_pdf_in_browser(pdf_path):
-    path = Path(pdf_path).resolve()
-    uri = path.as_uri()
-    try:
-        if webbrowser.open(uri, new=2):
-            return True
-    except Exception:
-        pass
-
-    if platform.system() == "Windows":
-        try:
-            _popen_silent(["cmd.exe", "/c", "start", "", uri])
-            return True
-        except OSError:
-            pass
-
-    return False
-
-
-def _parse_path(value):
-    if value.lower().startswith("file://"):
-        parsed = urlparse(value)
-        path = parsed.path or ""
-        if parsed.netloc and parsed.netloc not in ("", "localhost"):
-            path = f"//{parsed.netloc}{path}"
-        value = url2pathname(path)
-    return Path(value).expanduser().resolve()
-
-
-def _cleanup_aux(directory, stem):
-    for ext in (".aux", ".log", ".out", ".toc", ".nav", ".snm", ".fls", ".fdb_latexmk", ".synctex.gz"):
-        try:
-            (directory / f"{stem}{ext}").unlink()
-        except OSError:
-            pass
+    return latex_to_pdf.open_pdf_in_browser(pdf_path)
 
 
 def _which_first(*names):
