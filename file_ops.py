@@ -40,10 +40,10 @@ def write_prompt_file(folder, filename, prompt, description, width=80):
     return path
 
 
-def copy_template(template_path, target_dir, target_name=None):
+def copy_template(template_path, target_dir, target_name=None, overwrite=False):
     if not template_path.exists():
         return None
     target = target_dir / (target_name or template_path.name)
-    if not target.exists():
+    if overwrite or not target.exists():
         shutil.copyfile(template_path, target)
     return target

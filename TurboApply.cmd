@@ -29,13 +29,13 @@ goto :after_refreshpath
 :refreshpath
 set "POWERSHELL_EXE=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe"
 if not exist "%POWERSHELL_EXE%" set "POWERSHELL_EXE=powershell"
-set "PATH=%PATH%;%APPDATA%\npm;%LOCALAPPDATA%\Programs\Python\Python313;%LOCALAPPDATA%\Programs\Python\Python312;%LOCALAPPDATA%\Programs\Python\Python311;%LOCALAPPDATA%\Programs\MiKTeX\miktex\bin\x64;C:\Program Files\MiKTeX\miktex\bin\x64;%SystemRoot%;%SystemRoot%\System32;%SystemRoot%\System32\WindowsPowerShell\v1.0"
+set "PATH=%PATH%;%APPDATA%\npm;%LOCALAPPDATA%\Programs\Python\Python313;%LOCALAPPDATA%\Programs\Python\Python312;%LOCALAPPDATA%\Programs\Python\Python311;%LOCALAPPDATA%\Programs\MiKTeX\miktex\bin\x64;C:\Program Files\MiKTeX\miktex\bin\x64;%ProgramFiles%\Git\cmd;%ProgramFiles(x86)%\Git\cmd;%SystemRoot%;%SystemRoot%\System32;%SystemRoot%\System32\WindowsPowerShell\v1.0"
 exit /b 0
 
 :after_refreshpath
 
 rem Check / Install Python
-echo  [1/6] Checking Python...
+echo  [1/7] Checking Python...
 
 rem Try to find python in PATH or common locations
 set "PYTHON="
@@ -86,7 +86,7 @@ rem Show which Python we're using
 for /f "tokens=*" %%v in ('"%PYTHON%" --version 2^>^&1') do echo        Using: %%v
 
 rem Check / Install pip packages
-echo  [2/6] Installing pip packages...
+echo  [2/7] Installing pip packages...
 "%PYTHON%" -m pip --version >nul 2>&1
 if %errorlevel% neq 0 (
     "%PYTHON%" -m ensurepip --upgrade >nul 2>&1
@@ -100,7 +100,7 @@ if exist "%~dp0requirements.txt" (
 )
 
 rem Check tkinter
-echo  [3/6] Checking tkinter...
+echo  [3/7] Checking tkinter...
 "%PYTHON%" -c "import tkinter" >nul 2>&1
 if %errorlevel% neq 0 (
     color 0E
@@ -120,15 +120,15 @@ if %errorlevel% neq 0 (
 echo        tkinter OK.
 
 rem Check / Install MiKTeX (pdflatex)
-echo  [4/6] Checking pdflatex (MiKTeX)...
+echo  [4/7] Checking pdflatex (MiKTeX)...
 
 set "PDFLATEX="
-where pdflatex >nul 2>&1 && set "PDFLATEX=found"
+where pdflatex >nul 2>&1 && set "PDFLATEX=pdflatex"
 if not defined PDFLATEX (
-    if exist "%LOCALAPPDATA%\Programs\MiKTeX\miktex\bin\x64\pdflatex.exe" set "PDFLATEX=found"
+    if exist "%LOCALAPPDATA%\Programs\MiKTeX\miktex\bin\x64\pdflatex.exe" set "PDFLATEX=%LOCALAPPDATA%\Programs\MiKTeX\miktex\bin\x64\pdflatex.exe"
 )
 if not defined PDFLATEX (
-    if exist "C:\Program Files\MiKTeX\miktex\bin\x64\pdflatex.exe" set "PDFLATEX=found"
+    if exist "C:\Program Files\MiKTeX\miktex\bin\x64\pdflatex.exe" set "PDFLATEX=C:\Program Files\MiKTeX\miktex\bin\x64\pdflatex.exe"
 )
 
 if not defined PDFLATEX (
@@ -142,6 +142,13 @@ if not defined PDFLATEX (
     ) else (
         echo        MiKTeX installed successfully.
         call :refreshpath
+        where pdflatex >nul 2>&1 && set "PDFLATEX=pdflatex"
+        if not defined PDFLATEX (
+            if exist "%LOCALAPPDATA%\Programs\MiKTeX\miktex\bin\x64\pdflatex.exe" set "PDFLATEX=%LOCALAPPDATA%\Programs\MiKTeX\miktex\bin\x64\pdflatex.exe"
+        )
+        if not defined PDFLATEX (
+            if exist "C:\Program Files\MiKTeX\miktex\bin\x64\pdflatex.exe" set "PDFLATEX=C:\Program Files\MiKTeX\miktex\bin\x64\pdflatex.exe"
+        )
     )
 ) else (
     echo        pdflatex OK.
@@ -176,6 +183,7 @@ if not defined INITEXMF (
 )
 
 if defined INITEXMF (
+    "%INITEXMF%" --set-config-value=[MPM]AutoInstall=1 >nul 2>nul
     "%INITEXMF%" --enable-installer >nul 2>nul
     "%INITEXMF%" --update-fndb >nul 2>nul
     "%INITEXMF%" --mkmaps >nul 2>nul
@@ -185,8 +193,54 @@ if defined INITEXMF (
 )
 echo        LaTeX package prep done.
 
+echo        Running LaTeX smoke test...
+"%PYTHON%" "%~dp0latex_to_pdf.py" --self-test >nul 2>nul
+if !errorlevel! neq 0 (
+    color 0E
+    echo  [WARNING] LaTeX smoke test failed. PDF compilation may still fail.
+    echo           Run TurboApply.cmd --check-only again, or open MiKTeX Console
+    echo           and update/install packages before using Codex.
+) else (
+    echo        LaTeX smoke test OK.
+)
+
+rem Check / Install Git
+echo  [5/7] Checking Git...
+
+set "GIT="
+where git >nul 2>&1 && set "GIT=found"
+if not defined GIT (
+    if exist "%ProgramFiles%\Git\cmd\git.exe" set "GIT=found"
+)
+if not defined GIT (
+    if exist "%ProgramFiles(x86)%\Git\cmd\git.exe" set "GIT=found"
+)
+
+if not defined GIT (
+    echo        Git not found. Installing Git...
+    echo        This may take a few minutes, please wait...
+    winget install --id Git.Git -e --source winget --accept-source-agreements --accept-package-agreements --silent
+    if !errorlevel! neq 0 (
+        color 0E
+        echo  [WARNING] Git install failed. Codex can still run, but diff checks may fail.
+        echo           Install manually: https://git-scm.com/download/win
+    ) else (
+        call :refreshpath
+        where git >nul 2>&1 && set "GIT=found"
+        if defined GIT (
+            echo        Git installed successfully.
+        ) else (
+            color 0E
+            echo  [WARNING] Git installed, but it is not on PATH yet.
+            echo           Restart Windows if Codex still says git is unavailable.
+        )
+    )
+) else (
+    echo        Git OK.
+)
+
 rem Check / Install Codex CLI
-echo  [5/6] Checking Codex CLI...
+echo  [6/7] Checking Codex CLI...
 
 set "CODEX="
 where codex >nul 2>&1 && set "CODEX=found"
@@ -230,7 +284,7 @@ if not exist "%~dp0cookies.txt" (
 )
 
 rem Launch GUI
-echo  [6/6] Launching Turbo Apply...
+echo  [7/7] Launching Turbo Apply...
 echo.
 if defined TURBO_APPLY_CHECK_ONLY (
     color 0A

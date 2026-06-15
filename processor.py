@@ -97,7 +97,7 @@ def process_job(job_data, base_dir, source_url=None, french=False):
         "prompt_path": file_ops.write_prompt_file(folder, "prompt.txt", prompt_creator.get_main_prompt(french), desc),
         "cover_prompt_path": file_ops.write_prompt_file(folder, "prompt-cover.txt", prompt_creator.get_cover_prompt(french), desc),
         "resume_template_path": file_ops.copy_template(tpl_dir / "resume-template.tex", folder),
-        "latex_script_path": file_ops.copy_template(_LATEX_SCRIPT, folder),
+        "latex_script_path": file_ops.copy_template(_LATEX_SCRIPT, folder, overwrite=True),
     }
 
 def process_empty_job(name, base_dir, french=False):
@@ -113,5 +113,5 @@ def process_empty_job(name, base_dir, french=False):
         "prompt_path": file_ops.write_prompt_file(folder, "prompt.txt", prompt_creator.get_main_prompt(french), ""),
         "cover_prompt_path": file_ops.write_prompt_file(folder, "prompt-cover.txt", prompt_creator.get_cover_prompt(french), ""),
         "resume_template_path": file_ops.copy_template(tpl_dir / "resume-template.tex", folder),
-        "latex_script_path": file_ops.copy_template(_LATEX_SCRIPT, folder),
+        "latex_script_path": file_ops.copy_template(_LATEX_SCRIPT, folder, overwrite=True),
     }
